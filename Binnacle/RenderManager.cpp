@@ -109,7 +109,7 @@ void render_manager::select_scene(const std::shared_ptr<scene>& scn_ptr)
 
 void render_manager::update() const
 {
-	if (valid)
+	if (valid && GL_NO_ERROR == glGetError())
 	{
 		glfwPollEvents();
 	}
@@ -118,7 +118,7 @@ void render_manager::update() const
 
 void render_manager::render() const
 {
-	if (valid && rnd_ptr_ && scn_ptr_)
+	if (valid && rnd_ptr_ && scn_ptr_ && GL_NO_ERROR == glGetError())
 	{
 		// glfwMakeContextCurrent(window_);
 		rnd_ptr_->render(scn_ptr_);

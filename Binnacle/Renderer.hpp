@@ -33,10 +33,13 @@ struct renderer
 	renderer& operator=(renderer && rm) = default;
 	virtual ~renderer() = default;
 
-	void render(std::shared_ptr<scene> scn_ptr);
+	void render(const std::shared_ptr<scene>& scn_ptr) const;
 
 	bool load_shader(shader_type&& type, const std::string& filename);
 	bool compile_and_link_shaders();
 private:
 	std::unordered_map<shader_type, std::string> shaders_;
+	GLuint vbo_{};
+	GLuint vao_{};
+	GLuint vio_{};
 };

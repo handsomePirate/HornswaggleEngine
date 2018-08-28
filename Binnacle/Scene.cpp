@@ -47,4 +47,25 @@ scene::scene(const std::string& filename)
 	}
 
 	camera_ = glm::vec3(0, 0, -1);
+	
+	// =======TESTING=======
+	vertices_.resize(3);
+	vertices_[0] = glm::vec3(-0.5f, -0.5f, 0.0f);
+	vertices_[1] = glm::vec3(0.0f, 0.5f, 0.0f);
+	vertices_[2] = glm::vec3(0.5f, -0.5f, 0.0f);
+	
+	indices_.resize(3);
+	indices_[0] = 0;
+	indices_[1] = 1;
+	indices_[2] = 2;
+}
+
+const std::vector<glm::vec3>& scene::get_vertices() const
+{
+	return vertices_;
+}
+
+const std::vector<unsigned short>& scene::get_indices() const
+{
+	return indices_;
 }

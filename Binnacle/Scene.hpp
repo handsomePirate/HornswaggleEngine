@@ -12,8 +12,11 @@ struct scene
 	scene(scene && rm) = default;
 	scene& operator=(scene && rm) = default;
 	virtual ~scene() = default;
+
+	const std::vector<glm::vec3>& get_vertices() const;
+	const std::vector<unsigned short>& get_indices() const;
 private:
 	std::vector<glm::vec3> vertices_;
-	std::vector<int> indices_;
+	std::vector<unsigned short> indices_;
 	glm::vec3 camera_;
 };

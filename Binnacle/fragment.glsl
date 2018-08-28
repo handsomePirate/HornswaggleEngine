@@ -1,11 +1,11 @@
-#version 300
+#version 330 core
 
-in vec3 position;
-in vec3 norm;
-in vec3 color;
-in vec2 coords;
+in vec4 position;
+//in vec3 norm;
+//in vec3 color;
+//in vec2 coords;
 
-uniform sampler2D diffuseSampler;
+//uniform sampler2D diffuseSampler;
 
 out vec4 fragColor;
 

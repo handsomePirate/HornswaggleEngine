@@ -1,27 +1,28 @@
-#version 300
+#version 330 core
 
-in vec3 vertexPosition;
-in vec3 normal;
-in vec3 vertexColor;
-in vec2 vertexCoords;
+in vec4 vertexPosition;
+//in vec3 normal;
+//in vec3 vertexColor;
+//in vec2 vertexCoords;
 
-out vec3 color;
-out vec3 norm;
-out vec3 position;
-out vec2 coords;
-out float texUnit;
+//out vec3 color;
+//out vec3 norm;
+out vec4 position;
+//out vec2 coords;
+//out float texUnit;
 
-uniform mat4 projectionViewMatrix;
+//uniform mat4 projectionViewMatrix;
 
 void main(void)
 {
 	// Determining vertex position
-    gl_Position = projectionViewMatrix * vec4(vertexPosition, 1.0);
+    //gl_Position = projectionViewMatrix * vec4(vertexPosition, 1.0);
 
 	// Setting up parameters for fragment shader
-	color = vertexColor;
-	norm = normal;
+	//color = vertexColor;
+	//norm = normal;
+	gl_Position = vertexPosition;
 	position = vertexPosition;
-	coords = vertexCoords;
+	//coords = vertexCoords;
 	//texUnit = textureUnit;
 }
