@@ -11,18 +11,19 @@ out vec4 position;
 //out vec2 coords;
 //out float texUnit;
 
-//uniform mat4 projectionViewMatrix;
+uniform mat4 projectionViewMatrix;
+uniform vec3 camera;
 
 void main(void)
 {
-	// Determining vertex position
-    //gl_Position = projectionViewMatrix * vec4(vertexPosition, 1.0);
-
 	// Setting up parameters for fragment shader
 	//color = vertexColor;
 	//norm = normal;
-	gl_Position = vertexPosition;
-	position = vertexPosition;
+	// Determining vertex position
+    
+	gl_Position = projectionViewMatrix * vertexPosition;
+	//gl_Position = vertexPosition;
+	
 	//coords = vertexCoords;
 	//texUnit = textureUnit;
 }

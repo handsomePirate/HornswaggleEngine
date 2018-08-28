@@ -5,14 +5,14 @@
 #include "RenderManager.hpp"
 
 render_manager::render_manager(const bool fullscreen, const int samples, const int major_version, const int minor_version, const int width, const int height, const std::string& window_text, GLFWkeyfun key_callback)
-	: valid(true)
+	: valid_(true), width_(width), height_(height)
 {
 	// Initialize GLFW
 	if (!glfwInit()) // TODO: probably move outside of the manager
 	{
 		// TODO: exchange for a logger
 		std::cout << "Error: GLFW could not initialize!" << std::endl;
-		valid = false;
+		valid_ = false;
 		return;
 	}
 
@@ -32,7 +32,7 @@ render_manager::render_manager(const bool fullscreen, const int samples, const i
 		// TODO: exchange for a logger
 		std::cout << "Error: GLFW could not create a window!" << std::endl;
 		glfwTerminate();
-		valid = false;
+		valid_ = false;
 		return;
 	}
 
@@ -47,7 +47,7 @@ render_manager::render_manager(const bool fullscreen, const int samples, const i
 		// TODO: exchange for a logger
 		std::cout << "Error: GLEW could not initialize!" << std::endl;
 		glfwTerminate();
-		valid = false;
+		valid_ = false;
 		window_ = nullptr;
 		return;
 	}
@@ -70,12 +70,17 @@ render_manager::render_manager(const bool fullscreen, const int samples, const i
 
 bool render_manager::is_valid() const
 {
-	return valid;
+	return valid_;
+}
+
+float render_manager::get_aspect_ratio() const
+{
+	return width_ / height_;
 }
 
 void render_manager::select_renderer(const rm_choice rmc)
 {
-	if (valid)
+	if (valid_)
 	{
 		if (rmc == BINNACLE)
 		{
@@ -103,22 +108,36 @@ void render_manager::select_renderer(const rm_choice rmc)
 
 void render_manager::select_scene(const std::shared_ptr<scene>& scn_ptr)
 {
-	if (valid)
+	if (valid_)
 		scn_ptr_ = scn_ptr;
+}
+
+void render_manager::change_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, const float fov, const float aspect, const float z_near, const float z_far) const
+{
+	auto& cam = env_ptr_->get_camera();
+
+	cam.set_transform_focus(position, focus, up);
+	cam.set_frustum(fov, aspect, z_near, z_far);
+}
+
+camera& render_manager::get_camera() const
+{
+	return env_ptr_->get_camera();
 }
 
 void render_manager::update() const
 {
-	if (valid && GL_NO_ERROR == glGetError())
+	if (valid_ && GL_NO_ERROR == glGetError())
 	{
 		glfwPollEvents();
+		rnd_ptr_->update(env_ptr_);
 	}
 }
 
 
 void render_manager::render() const
 {
-	if (valid && rnd_ptr_ && scn_ptr_ && GL_NO_ERROR == glGetError())
+	if (valid_ && rnd_ptr_ && scn_ptr_ && GL_NO_ERROR == glGetError())
 	{
 		// glfwMakeContextCurrent(window_);
 		rnd_ptr_->render(scn_ptr_);
@@ -128,6 +147,6 @@ void render_manager::render() const
 
 render_manager::~render_manager()
 {
-	if (valid)
+	if (valid_)
 		glfwTerminate();
 }

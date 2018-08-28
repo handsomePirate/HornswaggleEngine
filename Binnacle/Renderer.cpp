@@ -15,7 +15,7 @@ shader::shader(GLint text_length, std::string text)
 {
 }
 
-renderer::renderer()
+renderer::renderer(): program_(0)
 {
 	glGenVertexArrays(1, &vao_);
 	glBindVertexArray(vao_);
@@ -31,6 +31,20 @@ renderer::renderer()
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+}
+
+void renderer::update(const std::shared_ptr<environment>& env_ptr_) const
+{
+	const auto camera_loc = glGetUniformLocation(program_, "camera");
+	glUniform3fv(camera_loc, 1, &env_ptr_->get_camera().get_position()[0]);
+
+	const auto projection_view_matrix_loc = glGetUniformLocation(program_, "projectionViewMatrix");
+	
+	const auto view_matrix = env_ptr_->get_camera().get_view_matrix();
+	const auto projection_matrix = env_ptr_->get_camera().get_projection_matrix();
+	const auto view_projection_matrix = projection_matrix * view_matrix;
+
+	glUniformMatrix4fv(projection_view_matrix_loc, 1, GL_FALSE, &view_projection_matrix[0][0]);
 }
 
 void renderer::render(const std::shared_ptr<scene>& scn_ptr) const
@@ -137,10 +151,10 @@ bool renderer::compile_and_link_shaders()
 	}
 	std::cout << "Fragment shader loaded." << std::endl;
 
-	const auto program = glCreateProgram();
+	program_ = glCreateProgram();
 
-	glAttachShader(program, vertex_shader);
-	glAttachShader(program, fragment_shader);
+	glAttachShader(program_, vertex_shader);
+	glAttachShader(program_, fragment_shader);
 
 	GLuint geometry_shader = 0;
 	bool has_geometry_shader = false;
@@ -173,18 +187,18 @@ bool renderer::compile_and_link_shaders()
 		}
 		std::cout << "Geometry shader loaded." << std::endl;
 
-		glAttachShader(program, geometry_shader);
+		glAttachShader(program_, geometry_shader);
 	}
 
-	glLinkProgram(program);
+	glLinkProgram(program_);
 
 	GLint linked;
-	glGetProgramiv(program, GL_LINK_STATUS, &linked);
+	glGetProgramiv(program_, GL_LINK_STATUS, &linked);
 
-	glValidateProgram(program);
+	glValidateProgram(program_);
 
 	GLint validated;
-	glGetProgramiv(program, GL_VALIDATE_STATUS, &validated);
+	glGetProgramiv(program_, GL_VALIDATE_STATUS, &validated);
 
 	glDeleteShader(vertex_shader);
 	glDeleteShader(fragment_shader);
@@ -193,7 +207,7 @@ bool renderer::compile_and_link_shaders()
 
 	if (linked && validated)
 	{
-		glUseProgram(program);
+		glUseProgram(program_);
 		return true;
 	}
 

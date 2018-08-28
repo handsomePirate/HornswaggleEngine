@@ -38,5 +38,8 @@
     <ClInclude Include="RenderManager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MathHelper.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

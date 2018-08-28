@@ -33,6 +33,7 @@ struct renderer
 	renderer& operator=(renderer && rm) = default;
 	virtual ~renderer() = default;
 
+	void update(const std::shared_ptr<environment>& env_ptr_) const;
 	void render(const std::shared_ptr<scene>& scn_ptr) const;
 
 	bool load_shader(shader_type&& type, const std::string& filename);
@@ -42,4 +43,6 @@ private:
 	GLuint vbo_{};
 	GLuint vao_{};
 	GLuint vio_{};
+
+	GLuint program_;
 };
