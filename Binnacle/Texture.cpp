@@ -2,6 +2,12 @@
 
 #include "Texture.hpp"
 
+texture::texture()
+{
+	handle = -1;
+	name = "null";
+}
+
 texture::texture(const std::string& filename) : texture(filename, filename) {}
 
 texture::texture(const std::string& filename, const std::string& name)

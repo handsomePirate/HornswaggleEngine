@@ -7,12 +7,16 @@ in vec2 coords;
 
 uniform sampler2D texSampler;
 uniform vec3 lights[];
+uniform bool useTexture;
+uniform vec3 matColor;
 
 out vec4 fragColor;
 
 void main(void)
 {
 	// Sampling from texture
-	fragColor = texture(texSampler, coords);
-	//fragColor = vec4(coords, 1.0, 1.0);
+	if (useTexture)
+		fragColor = texture(texSampler, coords);
+	else
+		fragColor = vec4(matColor, 1.0);
 }

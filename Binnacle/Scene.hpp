@@ -6,10 +6,26 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include "Texture.hpp"
+#include <map>
 
 struct camera
 {
 	camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, float fov, float aspect, float z_near, float z_far);
+
+	void rotate(const glm::vec3& axis, float angle);
+	void rotate(float x, float y, float z, float angle);
+
+	void rotate_local(const glm::vec3& axis, float angle);
+	void rotate_local(float x, float y, float z, float angle);
+
+	void translate(const glm::vec3& offset);
+	void translate(float dx, float dy, float dz);
+
+	void translate_local(const glm::vec3& offset);
+	void translate_local(float dx, float dy, float dz);
+
+	void translate_local_2_d(const glm::vec3& offset);
+	void translate_local_2_d(float dx, float dy, float dz);
 
 	void set_focus(glm::vec3& f);
 	void set_forward(glm::vec3& f);
@@ -52,6 +68,8 @@ struct camera
 
 	const glm::mat4& get_view_matrix() const;
 	const glm::mat4& get_projection_matrix() const;
+
+	void create_matrices();
 private:
 	glm::vec4 position_;
 	//glm::vec3 forward_;
@@ -181,8 +199,10 @@ private:
 
 struct model
 {
-	model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, const std::string& filename_model, const std::string& filename_texture = ""); // TODO: move scene loading to another project
-	int transform_vertices_to(vertex *pos, int index);
+	model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, const std::string& filename_model, int mat_id); // TODO: move scene loading to another project
+	
+	int get_index() const;
+	int transform_vertices_to(vertex *curr, vertex *pos, int index);
 
 	void rotate(const glm::vec3& axis, float angle);
 	void rotate(float x, float y, float z, float angle);
@@ -191,11 +211,18 @@ struct model
 	void scale(const glm::vec3& ratio);
 	void scale(float ratio);
 
+	void assign_position(const glm::vec4& position);
+	void assign_position(float x, float y, float z);
+	void assign_orientation(const glm::quat& orientation);
+	void assign_orientation(float x, float y, float z, float w);
+	void assign_scale(const glm::vec3& scale);
+	void assign_scale(float x, float y, float z);
+
 private:
 	void rotate(const glm::vec3&& axis, float angle);
 
-	vertex *vertices_;
-	unsigned short *indices_;
+	int vertices_index_;
+	int indices_index_;
 	std::unique_ptr<texture> tex_ptr_;
 
 	unsigned int vertex_count_;
@@ -207,23 +234,31 @@ private:
 	glm::vec3 scale_;
 };
 
+struct material_pack
+{
+	std::vector<model> models_;
+	std::vector<vertex> vertices_;
+	std::vector<vertex> transformed_vertices_;
+	std::vector<unsigned short> indices_;
+};
+
 struct scene
 {
-	scene() = default;
+	scene();
 	scene(const scene& rm) = delete;
 	scene& operator=(const scene& rm) = delete;
 	scene(scene && rm) = default;
 	scene& operator=(scene && rm) = default;
 	virtual ~scene() = default;
 
-	void load_model(const std::string& filename_model, const std::string& filename_texture = "");
+	void load_model(const std::string& filename_model, int mat_id = -1);
 	void update();
 
-	const std::vector<vertex>& get_vertices();
-	const std::vector<unsigned short>& get_indices() const;
+	void use_material(int mat_id);
+	void disable_material(int mat_id);
+
+	const std::vector<vertex>& get_vertices(int mat_id);
+	const std::vector<unsigned short>& get_indices(int mat_id) const;
 private:
-	std::vector<model> models_;
-	std::vector<vertex> vertices_;
-	std::vector<vertex> transformed_vertices_;
-	std::vector<unsigned short> indices_;
+	std::unique_ptr<std::map<int, material_pack>> pck_ptr_;
 };
