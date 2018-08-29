@@ -12,6 +12,7 @@ typedef unsigned int rm_choice;
 
 // Serves the purpose of maintaining the renderer to use, the scene to render and the window to render to
 // TODO: make it possible to render to texture
+// TODO: monitor window size changes
 struct render_manager
 {
 	render_manager(bool fullscreen, int samples, int major_version, int minor_version, int width, int height, const std::string& window_text, GLFWkeyfun key_callback);
@@ -36,6 +37,8 @@ struct render_manager
 
 	void change_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, float fov, float aspect, float z_near, float z_far) const;
 	camera& get_camera() const;
+
+	void load_model(const std::string& filename_model, const std::string& filename_texture = "") const;
 
 	void update() const;
 	void render() const;

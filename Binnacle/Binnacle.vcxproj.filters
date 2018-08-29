@@ -27,6 +27,9 @@
     <ClCompile Include="Scene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Texture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Renderer.hpp">
@@ -39,6 +42,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MathHelper.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Texture.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

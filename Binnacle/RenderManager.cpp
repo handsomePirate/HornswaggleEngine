@@ -125,9 +125,18 @@ camera& render_manager::get_camera() const
 	return env_ptr_->get_camera();
 }
 
+void render_manager::load_model(const std::string& filename_model, const std::string& filename_texture) const
+{
+	scn_ptr_->load_model(filename_model, filename_texture);
+}
+
 void render_manager::update() const
 {
-	if (valid_ && GL_NO_ERROR == glGetError())
+	if (valid_ && scn_ptr_)
+	{
+		scn_ptr_->update();
+	}
+	if (valid_ && rnd_ptr_ && env_ptr_ && GL_NO_ERROR == glGetError())
 	{
 		glfwPollEvents();
 		rnd_ptr_->update(env_ptr_);
