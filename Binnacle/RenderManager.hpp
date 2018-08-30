@@ -3,6 +3,7 @@
 #include <string>
 #include <map>
 #include <queue>
+#include <chrono>
 
 #include "Renderer.hpp"
 #include "Scene.hpp"
@@ -43,9 +44,11 @@ struct render_manager
 	camera& get_camera() const;
 
 	void load_model(const std::string& filename_model, int mat_id = -1) const;
-	int create_material(GLuint program, const std::string& filename_texture = "");
-	int create_material(GLuint program, const glm::vec3& color);
+	int create_material(GLuint program, const std::string& filename_texture = "", bool smooth = false);
+	int create_material(GLuint program, const glm::vec3& color, bool smooth = false);
 	void delete_material(int index);
+
+	float get_fps();
 
 	void update();
 	void render() const;
@@ -85,6 +88,11 @@ private:
 
 	bool reset_cursor_ = true;
 	bool reset_camera_ = true;
+
+	std::chrono::high_resolution_clock::time_point frame_start_;
+	unsigned long frame_count_ = 0;
+
+	bool first_update_ = true;
 };
 
 

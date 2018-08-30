@@ -22,7 +22,7 @@ camera::camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, const fl
 	create_projection_matrix();
 	create_view_matrix();
 }
-#include <iostream>
+
 void camera::rotate(const glm::vec3& axis, const float angle)
 {
 	if (angle == 0)
@@ -41,19 +41,9 @@ void camera::rotate(const float x, const float y, const float z, const float ang
 
 void camera::rotate_local(const glm::vec3& axis, const float angle)
 {
-	const auto forward = normalize(focus_ - glm::vec3(position_));
-	const auto offset_angle = acos(dot(glm::vec3(0.0f, 0.0f, -1.0f), forward) / length(forward));
-	const auto offset_axis = normalize(cross(glm::vec3(0.0f, 0.0f, -1.0f), forward));
+	const glm::vec3 new_axis = get_local_to_global_matrix() * glm::vec4(axis, 1.0f);
 
-	if (offset_axis.x != offset_axis.x || offset_axis.y != offset_axis.y || offset_axis.z != offset_axis.z)
-	{
-		rotate(offset_axis, offset_angle);
-		return;
-	}
-
-	const glm::quat offset_rotation = glm::rotate(glm::quat(1.0f, 0.0f, 0.0f, 0.0f), offset_angle, offset_axis);
-	const auto new_axis = offset_rotation * axis;
-	rotate(offset_rotation * axis, angle);
+	rotate(new_axis, angle);
 }
 
 void camera::rotate_local(const float x, const float y, const float z, const float angle)
@@ -85,20 +75,9 @@ void camera::translate(const float dx, const float dy, const float dz)
 
 void camera::translate_local(const glm::vec3& offset)
 {
-	const auto forward = normalize(focus_ - glm::vec3());
-	const auto offset_angle = acos(dot(glm::vec3(0.0f, 0.0f, -1.0f), forward) / length(forward));
-	const auto offset_axis = normalize(cross(glm::vec3(0.0f, 0.0f, -1.0f), forward));
+	const glm::vec3 new_offset = get_local_to_global_matrix() * glm::vec4(offset, 1.0f);
 
-	if (offset_axis.x != offset_axis.x || offset_axis.y != offset_axis.y || offset_axis.z != offset_axis.z)
-	{
-		rotate(offset_axis, offset_angle);
-		return;
-	}
-
-	const glm::quat offset_rotation = glm::rotate(glm::quat(1.0f, 0.0f, 0.0f, 0.0f), offset_angle, offset_axis);
-	const glm::vec3 real_offset = offset_rotation * offset;
-
-	translate(real_offset);
+	translate(new_offset);
 }
 
 void camera::translate_local(const float dx, const float dy, const float dz)
@@ -108,28 +87,34 @@ void camera::translate_local(const float dx, const float dy, const float dz)
 
 void camera::translate_local_2_d(const glm::vec3& offset)
 {
-	const auto forward = normalize(focus_ - glm::vec3(position_));
-	const auto offset_angle = acos(dot(glm::vec3(0.0f, 0.0f, -1.0f), forward) / length(forward));
-	const auto offset_axis = normalize(cross(glm::vec3(0.0f, 0.0f, -1.0f), forward));
+	glm::vec3 new_offset = get_local_to_global_matrix() * glm::vec4(offset, 1.0f);
+	new_offset.y = 0.0f;
+	new_offset = normalize(new_offset) * length(offset);
 
-	if (offset_axis.x != offset_axis.x || offset_axis.y != offset_axis.y || offset_axis.z != offset_axis.z)
-	{
-		rotate(offset_axis, offset_angle);
-		return;
-	}
-
-	auto length = glm::length(offset);
-	const glm::quat offset_rotation = glm::rotate(glm::quat(1.0f, 0.0f, 0.0f, 0.0f), offset_angle, offset_axis);
-	glm::vec3 real_offset = offset_rotation * offset;
-	real_offset.y = 0.0f;
-	real_offset = normalize(real_offset) * length;
-
-	translate(real_offset);
+	translate(new_offset);
 }
 
 void camera::translate_local_2_d(const float dx, const float dy, const float dz)
 {
 	translate_local_2_d(glm::vec3(dx, dy, dz));
+}
+
+glm::mat4 camera::get_local_to_global_matrix() const
+{
+	const auto forward = normalize(focus_ - glm::vec3(position_));
+	const auto aside = cross(up_, forward);
+
+	const auto a11 = aside.x; const auto a12 = aside.y; const auto a13 = aside.z;
+	const auto a21 = up_.x; const auto a22 = up_.y; const auto a23 = up_.z;
+	const auto a31 = forward.x; const auto a32 = forward.y; const auto a33 = forward.z;
+	const auto a41 = position_.x; const auto a42 = position_.y; const auto a43 = position_.z;
+
+	return inverse(glm::mat4( // transposed
+		a11, a21, a31, a41,
+		a12, a22, a32, a42,
+		a13, a23, a33, a43,
+		  0,   0,   0,  1
+	));
 }
 
 void camera::set_focus(glm::vec3& f)
@@ -336,6 +321,29 @@ void camera::create_view_matrix()
 	view_matrix_ = lookAt(glm::vec3(position_), glm::vec3(focus_), glm::vec3(up_));
 }
 
+light::light(const glm::vec3& position, const glm::vec3& color, const float diffuse_intensity, const float specular_intensity)
+	: specular_intensity_(specular_intensity), diffuse_intensity_(diffuse_intensity), color_(color), position_(position) {}
+
+const glm::vec3& light::get_position() const
+{
+	return position_;
+}
+
+const glm::vec3& light::get_color() const
+{
+	return color_;
+}
+
+float light::get_diffuse_intensity() const
+{
+	return diffuse_intensity_;
+}
+
+float light::get_specular_intensity() const
+{
+	return specular_intensity_;
+}
+
 environment::environment(camera& cam)
 	: camera_(cam) { }
 
@@ -344,9 +352,24 @@ camera& environment::get_camera()
 	return camera_;
 }
 
-const std::vector<glm::vec3>& environment::get_lights() const
+const std::vector<glm::vec3>& environment::get_light_positions() const
 {
-	return lights_;
+	return light_positions_;
+}
+
+const std::vector<glm::vec3>& environment::get_light_colors() const
+{
+	return light_colors_;
+}
+
+const std::vector<float>& environment::get_light_diffuse_intensities() const
+{
+	return light_diffuse_intensities_;
+}
+
+const std::vector<float>& environment::get_light_specular_intensities() const
+{
+	return light_specular_intensities_;
 }
 
 #define DEBUG_LIMIT_INDICES_ 3
@@ -457,6 +480,7 @@ model::model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices
 				// TODO: indexed loading
 				if (third_n == -1)
 				{
+					// TODO: clean up
 					vertices.emplace_back(positions[first_i - 1]);
 					indices.push_back(vertices.size() - 1);
 					vertices.emplace_back(positions[second_i - 1]);

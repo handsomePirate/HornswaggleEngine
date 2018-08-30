@@ -176,19 +176,19 @@ void render_manager::load_model(const std::string& filename_model, const int mat
 		{id = next_free_id_++;}\
 	else {id = free_ids_.front(); free_ids_.pop();}
 
-int render_manager::create_material(const GLuint program, const std::string& filename_texture)
+int render_manager::create_material(const GLuint program, const std::string& filename_texture, const bool smooth)
 {
 	ASSIGN_FREE_ID(free_ids_, next_free_id_);
-	(*mat_ptr_)[id] = material(filename_texture, program);
+	(*mat_ptr_)[id] = material(filename_texture, program, smooth);
 	scn_ptr_->use_material(id);
 
 	return id;
 }
 
-int render_manager::create_material(const GLuint program, const glm::vec3& color)
+int render_manager::create_material(const GLuint program, const glm::vec3& color, const bool smooth)
 {
 	ASSIGN_FREE_ID(free_ids_, next_free_id_);
-	(*mat_ptr_)[id] = material(color, program);
+	(*mat_ptr_)[id] = material(color, program, smooth);
 	scn_ptr_->use_material(id);
 
 	return id;
@@ -203,8 +203,26 @@ void render_manager::delete_material(const int index)
 	}
 }
 
+float render_manager::get_fps()
+{
+	const auto frame_end = std::chrono::high_resolution_clock::now();
+	const auto duration = frame_end - frame_start_;
+	auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+	const float result = frame_count_ / (milliseconds.count() * 0.001f);
+	frame_start_ = std::chrono::high_resolution_clock::now();
+	frame_count_ = 0;
+	return result;
+}
+
 void render_manager::update()
 {
+	if (first_update_)
+	{
+		frame_start_ = std::chrono::high_resolution_clock::now();
+		frame_count_ = 0;
+		first_update_ = false;
+	}
+
 	if (glfwWindowShouldClose(window_))
 		should_end_ = true;
 
@@ -216,17 +234,17 @@ void render_manager::update()
 
 		const float speed = 0.05f;
 		if (keys_manager_[GLFW_KEY_A] || keys_manager_[GLFW_KEY_LEFT])
-			get_camera().translate_local_2_d(-speed, 0.0f, 0.0f);
-		if (keys_manager_[GLFW_KEY_D] || keys_manager_[GLFW_KEY_RIGHT])
 			get_camera().translate_local_2_d(speed, 0.0f, 0.0f);
+		if (keys_manager_[GLFW_KEY_D] || keys_manager_[GLFW_KEY_RIGHT])
+			get_camera().translate_local_2_d(-speed, 0.0f, 0.0f);
 		if (keys_manager_[GLFW_KEY_W] || keys_manager_[GLFW_KEY_UP])
-			get_camera().translate_local_2_d(0.0f, 0.0f, -speed);
-		if (keys_manager_[GLFW_KEY_S] || keys_manager_[GLFW_KEY_DOWN])
 			get_camera().translate_local_2_d(0.0f, 0.0f, speed);
+		if (keys_manager_[GLFW_KEY_S] || keys_manager_[GLFW_KEY_DOWN])
+			get_camera().translate_local_2_d(0.0f, 0.0f, -speed);
 
 		if (reset_camera_)
 		{
-			get_camera().set_transform_forward(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			get_camera().set_transform_forward(glm::vec3(0.0f, 0.5, 5.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 			reset_camera_ = false;
 		}
 
@@ -239,6 +257,8 @@ void render_manager::update()
 		for (auto && shd : *shd_ptr_)
 			shd.second.update(env_ptr_);
 	}
+
+	++frame_count_;
 }
 
 
@@ -272,6 +292,10 @@ void render_manager::key_callback(GLFWwindow* window, const int key, const int s
 	{
 		reset_camera_ = !reset_camera_;
 	}
+	if (keys_manager_[GLFW_KEY_F] && action == GLFW_PRESS)
+	{
+		std::cout << get_fps() << std::endl;
+	}
 
 	if (key == GLFW_KEY_ESCAPE)
 		should_end_ = true;
@@ -282,7 +306,7 @@ void render_manager::mouse_move_callback(GLFWwindow* window, const double x_pos,
 	const auto resize_const = 500.0f;
 
 	cursor_dx_ = - (x_pos - cursor_x_) / resize_const;
-	cursor_dy_ = - (y_pos - cursor_y_) / resize_const;
+	cursor_dy_ = (y_pos - cursor_y_) / resize_const;
 
 	get_camera().rotate(glm::vec3(0.0f, 1.0f, 0.0f), cursor_dx_);
 	get_camera().rotate_local(glm::vec3(1.0f, 0.0f, 0.0f), cursor_dy_);

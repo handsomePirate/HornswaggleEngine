@@ -35,6 +35,26 @@ bool shader_program::load_shader(shader_type&& type, const std::string& filename
 	return true;
 }
 
+#define CHECK_SHADER_LOG(sh, text)\
+{GLint maxLength = 0; \
+glGetShaderiv(sh, GL_INFO_LOG_LENGTH, &maxLength); \
+std::vector<GLchar> infoLog(maxLength); \
+glGetInfoLogARB(sh, maxLength, &maxLength, &infoLog[0]); \
+std::cout << text << std::endl; \
+for (auto && ch : infoLog)\
+std::cout << static_cast<char>(ch); \
+std::cout << std::endl; }
+
+
+#define CHECK_PROGRAM_LOG(program, text)\
+{GLint maxLength = 0;\
+glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);\
+std::vector<GLchar> infoLog(maxLength);\
+glGetProgramInfoLog(program, maxLength, &maxLength, &infoLog[0]);\
+std::cout << text << std::endl;\
+for (auto && ch : infoLog)\
+std::cout << static_cast<char>(ch);\
+std::cout << std::endl;}
 
 bool shader_program::compile_and_link_shaders()
 {
@@ -63,17 +83,7 @@ bool shader_program::compile_and_link_shaders()
 	glGetObjectParameterivARB(vertex_shader, GL_COMPILE_STATUS, &compiled);
 	if (!compiled)
 	{
-		GLint blen = 0;
-		GLsizei slen = 0;
-
-		glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &blen);
-		if (blen > 1)
-		{
-			auto *compiler_log = static_cast<GLchar *>(malloc(blen));
-			glGetInfoLogARB(vertex_shader, blen, &slen, compiler_log);
-			std::cout << "vertex shader:" << std::endl << compiler_log << std::endl;
-			free(compiler_log);
-		}
+		CHECK_SHADER_LOG(vertex_shader, "vertex shader:");
 		return false;
 	}
 	std::cout << "Vertex shader loaded." << std::endl;
@@ -81,17 +91,7 @@ bool shader_program::compile_and_link_shaders()
 	glGetObjectParameterivARB(fragment_shader, GL_COMPILE_STATUS, &compiled);
 	if (!compiled)
 	{
-		GLint blen = 0;
-		GLsizei slen = 0;
-
-		glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &blen);
-		if (blen > 1)
-		{
-			auto *compiler_log = static_cast<GLchar *>(malloc(blen));
-			glGetInfoLogARB(fragment_shader, blen, &slen, compiler_log);
-			std::cout << "fragment shader:" << std::endl << compiler_log << std::endl;
-			free(compiler_log);
-		}
+		CHECK_SHADER_LOG(fragment_shader, "fragment shader:");
 		return false;
 	}
 	std::cout << "Fragment shader loaded." << std::endl;
@@ -115,17 +115,7 @@ bool shader_program::compile_and_link_shaders()
 		glGetObjectParameterivARB(geometry_shader, GL_COMPILE_STATUS, &compiled);
 		if (!compiled)
 		{
-			GLint blen = 0;
-			GLsizei slen = 0;
-
-			glGetShaderiv(geometry_shader, GL_INFO_LOG_LENGTH, &blen);
-			if (blen > 1)
-			{
-				auto* compiler_log = static_cast<GLchar *>(malloc(blen));
-				glGetInfoLogARB(geometry_shader, blen, &slen, compiler_log);
-				std::cout << "geometry shader:" << std::endl << compiler_log << std::endl;
-				free(compiler_log);
-			}
+			CHECK_SHADER_LOG(geometry_shader, "geometry shader:");
 			return false;
 		}
 		std::cout << "Geometry shader loaded." << std::endl;
@@ -137,18 +127,30 @@ bool shader_program::compile_and_link_shaders()
 
 	GLint linked;
 	glGetProgramiv(program_, GL_LINK_STATUS, &linked);
+	
+	if (!linked)
+	{
+		CHECK_PROGRAM_LOG(program_, "program linking:");
+		return false;
+	}
 
 	glValidateProgram(program_);
 
 	GLint validated;
 	glGetProgramiv(program_, GL_VALIDATE_STATUS, &validated);
 
+	if (!validated)
+	{
+		CHECK_PROGRAM_LOG(program_, "program validating:");
+		return false;
+	}
+
 	glDeleteShader(vertex_shader);
 	glDeleteShader(fragment_shader);
 	if (has_geometry_shader)
 		glDeleteShader(geometry_shader);
 
-	return linked && validated;
+	return true;
 }
 
 GLuint shader_program::get_id() const
@@ -170,25 +172,38 @@ void shader_program::update(const std::shared_ptr<environment>& env_ptr) const
 	glUniformMatrix4fv(projection_view_matrix_loc, 1, GL_FALSE, &view_projection_matrix[0][0]);
 
 	// The lights uniform
-	const auto lights_loc = glGetUniformLocation(program_, "lights");
-	const auto lights = env_ptr->get_lights();
-	glUniform3fv(lights_loc, lights.size(), &lights[0][0]);
+	const auto light_pos_loc = glGetUniformLocation(program_, "lightPositions");
+	const auto light_pos = env_ptr->get_light_positions();
+	glUniform3fv(light_pos_loc, light_pos.size(), &light_pos[0][0]);
 
+	const int light_count_limit = 20;
 	const auto lights_count_loc = glGetUniformLocation(program_, "lightsCount");
-	glUniform1i(lights_count_loc, lights.size());
+	glUniform1i(lights_count_loc, light_pos.size() > light_count_limit ? light_count_limit : light_pos.size());
+
+	const auto light_col_loc = glGetUniformLocation(program_, "lightColors");
+	const auto light_col = env_ptr->get_light_colors();
+	glUniform3fv(light_col_loc, light_col.size(), &light_col[0][0]);
+
+	const auto lights_diff_loc = glGetUniformLocation(program_, "lightDiffI");
+	const auto lights_diff = env_ptr->get_light_diffuse_intensities();
+	glUniform1fv(lights_diff_loc, lights_diff.size(), &lights_diff[0]);
+
+	const auto lights_spec_loc = glGetUniformLocation(program_, "lightSpecI");
+	const auto lights_spec = env_ptr->get_light_specular_intensities();
+	glUniform1fv(lights_spec_loc, lights_spec.size(), &lights_spec[0]);
 }
 
 material::material()
-	: use_texture_(false), color_(0.0f, 0.0f, 0.0f), program_(0), initialized_(false) {}
+	: use_texture_(false), color_(0.0f, 0.0f, 0.0f), program_(0), smooth_(false), initialized_(false) {}
 
-material::material(const GLuint program)
-	: use_texture_(true), color_(0.0f, 0.0f, 0.0f), program_(program), initialized_(true) {}
+material::material(const GLuint program, const bool smooth)
+	: use_texture_(true), color_(0.0f, 0.0f, 0.0f), program_(program), smooth_(smooth), initialized_(true) {}
 
-material::material(const std::string& filename_texture, const GLuint program)
-	: texture_(filename_texture), use_texture_(true), color_(0.0f, 0.0f, 0.0f), program_(program), initialized_(true) {}
+material::material(const std::string& filename_texture, const GLuint program, const bool smooth)
+	: texture_(filename_texture), use_texture_(true), color_(0.0f, 0.0f, 0.0f), program_(program), smooth_(smooth), initialized_(true) {}
 
-material::material(const glm::vec3& color, const GLuint program)
-	: use_texture_(false), color_(color), program_(program), initialized_(true) {}
+material::material(const glm::vec3& color, const GLuint program, const bool smooth)
+	: use_texture_(false), color_(color), program_(program), smooth_(smooth), initialized_(true) {}
 
 void material::set_as_active() const
 {
@@ -218,4 +233,7 @@ void material::update()
 	// The texture samplers
 	const auto tex_sampler_loc = glGetUniformLocation(program_, "texSampler");
 	glUniform1i(tex_sampler_loc, 0);
+
+	const auto smooth_loc = glGetUniformLocation(program_, "smoothShading");
+	glUniform1i(smooth_loc, smooth_);
 }

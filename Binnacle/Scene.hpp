@@ -27,6 +27,8 @@ struct camera
 	void translate_local_2_d(const glm::vec3& offset);
 	void translate_local_2_d(float dx, float dy, float dz);
 
+	glm::mat4 get_local_to_global_matrix() const;
+
 	void set_focus(glm::vec3& f);
 	void set_forward(glm::vec3& f);
 	void set_position(glm::vec3& p);
@@ -87,36 +89,69 @@ private:
 	void create_view_matrix();
 };
 
+struct light
+{
+	light(const glm::vec3& position, const glm::vec3& color, float diffuse_intensity, float specular_intensity);
+
+	const glm::vec3& get_position() const;
+	const glm::vec3& get_color() const;
+	float get_diffuse_intensity() const;
+	float get_specular_intensity() const;
+private:
+	float specular_intensity_;
+	float diffuse_intensity_;
+	glm::vec3 color_;
+
+	glm::vec3 position_;
+};
+
 struct environment
 {
 	explicit environment(camera& cam);
 	camera& get_camera();
 
 	template <class ... T>
-	void add_lights(glm::vec3& first, T&&... args);
+	void add_lights(light& first, T&&... args);
 	static void add_lights() {}
 
 	template <class ... T>
 	void set_lights(T&&... args);
 
-	const std::vector<glm::vec3>& get_lights() const;
+	const std::vector<glm::vec3>& get_light_positions() const;
+	const std::vector<glm::vec3>& get_light_colors() const;
+	const std::vector<float>& get_light_diffuse_intensities() const;
+	const std::vector<float>& get_light_specular_intensities() const;
 private:
-	std::vector<glm::vec3> lights_;
+	std::vector<glm::vec3> light_positions_;
+	std::vector<glm::vec3> light_colors_;
+	std::vector<float> light_diffuse_intensities_;
+	std::vector<float> light_specular_intensities_;
 	camera camera_;
 };
 
 template <class ... T>
-void environment::add_lights(glm::vec3& first, T&&... args)
+void environment::add_lights(light& first, T&&... args)
 {
-	lights_.push_back(first);
+	light_positions_.push_back(first.get_position());
+	light_colors_.push_back(first.get_color());
+	light_diffuse_intensities_.push_back(first.get_diffuse_intensity());
+	light_specular_intensities_.push_back(first.get_specular_intensity());
+	
 	add_lights(std::forward<T>(args)...);
 }
 
 template <class ... T>
 void environment::set_lights(T&&... args)
 {
-	if (!lights_.empty())
-		lights_.clear();
+	if (!light_positions_.empty())
+		light_positions_.clear();
+	if (!light_colors_.empty())
+		light_colors_.clear();
+	if (!light_diffuse_intensities_.empty())
+		light_diffuse_intensities_.clear();
+	if (!light_specular_intensities_.empty())
+		light_specular_intensities_.clear();
+	
 	add_lights(std::forward<T>(args)...);
 }
 

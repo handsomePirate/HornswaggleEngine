@@ -44,14 +44,14 @@ private:
 struct material
 {
 	material();
-	explicit material(GLuint program);
+	explicit material(GLuint program, bool smooth = false);
 	material(const material& rm) = delete;
 	material& operator=(const material& rm) = delete;
 	material(material && rm) = default;
 	material& operator=(material && rm) = default;
 	virtual ~material() = default;
-	material(const std::string& filename_texture, GLuint program);
-	material(const glm::vec3& color, GLuint program);
+	material(const std::string& filename_texture, GLuint program, bool smooth = false);
+	material(const glm::vec3& color, GLuint program, bool smooth = false);
 
 	void set_as_active() const;
 	void use_program(GLuint program);
@@ -62,6 +62,7 @@ private:
 	bool use_texture_;
 	glm::vec3 color_;
 	GLuint program_;
-	
+	bool smooth_;
+
 	bool initialized_;
 };

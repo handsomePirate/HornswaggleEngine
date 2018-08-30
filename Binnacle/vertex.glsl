@@ -6,7 +6,8 @@ layout(location = 2) in vec3 vertexColor;
 layout(location = 3) in vec2 vertexCoords;
 
 smooth out vec3 color;
-smooth out vec3 norm;
+flat out vec3 norm;
+smooth out vec3 varNorm;
 smooth out vec4 position;
 smooth out vec2 coords;
 //out float texUnit;
@@ -19,6 +20,7 @@ void main(void)
 	// Setting up parameters for fragment shader
 	color = vertexColor;
 	norm = normal;
+	varNorm = normal;
 	//color = vec3(vertexCoords, 0);//normal;
 	
 	// Determining vertex position
