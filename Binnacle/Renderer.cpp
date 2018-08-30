@@ -48,10 +48,7 @@ void renderer::render(const std::shared_ptr<scene>& scn_ptr, const std::shared_p
 		const auto& vertices = scn_ptr->get_vertices(mat.first);
 		if (vertices.empty())
 		{
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			glBindVertexArray(0);
-			return;
+			continue;
 		}
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertex), &vertices[0], GL_DYNAMIC_DRAW);
 

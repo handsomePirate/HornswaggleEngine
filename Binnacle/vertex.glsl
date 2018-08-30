@@ -23,7 +23,7 @@ void main(void)
 	
 	// Determining vertex position
 	gl_Position = projectionViewMatrix * vertexPosition; 
-	position = gl_Position;
+	position = vertexPosition;
 	//gl_Position = vertexPosition;
 	
 	coords = vertexCoords;

@@ -118,9 +118,11 @@ void camera::translate_local_2_d(const glm::vec3& offset)
 		return;
 	}
 
+	auto length = glm::length(offset);
 	const glm::quat offset_rotation = glm::rotate(glm::quat(1.0f, 0.0f, 0.0f, 0.0f), offset_angle, offset_axis);
 	glm::vec3 real_offset = offset_rotation * offset;
 	real_offset.y = 0.0f;
+	real_offset = normalize(real_offset) * length;
 
 	translate(real_offset);
 }
@@ -533,6 +535,7 @@ int model::transform_vertices_to(vertex *curr, vertex *pos, const int index)
 		*pos = *curr;
 
 		pos->set_position(model_matrix_ * curr->get_position());
+		pos->set_normal(orientation_ * curr->get_normal());
 
 		++pos;
 		++curr;

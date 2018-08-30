@@ -160,12 +160,10 @@ void shader_program::update(const std::shared_ptr<environment>& env_ptr) const
 {
 	// The camera uniform
 	const auto camera_loc = glGetUniformLocation(program_, "camera"); // TODO: move the location retrieval
-
 	glUniform3fv(camera_loc, 1, &env_ptr->get_camera().get_position()[0]);
 
 	// The transformation matrices uniform
 	const auto projection_view_matrix_loc = glGetUniformLocation(program_, "projectionViewMatrix");
-
 	const auto view_matrix = env_ptr->get_camera().get_view_matrix();
 	const auto projection_matrix = env_ptr->get_camera().get_projection_matrix();
 	const auto view_projection_matrix = projection_matrix * view_matrix;
@@ -173,9 +171,11 @@ void shader_program::update(const std::shared_ptr<environment>& env_ptr) const
 
 	// The lights uniform
 	const auto lights_loc = glGetUniformLocation(program_, "lights");
-
 	const auto lights = env_ptr->get_lights();
 	glUniform3fv(lights_loc, lights.size(), &lights[0][0]);
+
+	const auto lights_count_loc = glGetUniformLocation(program_, "lightsCount");
+	glUniform1i(lights_count_loc, lights.size());
 }
 
 material::material()

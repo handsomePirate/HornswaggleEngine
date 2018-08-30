@@ -60,7 +60,6 @@ render_manager::render_manager(const bool fullscreen, const int samples, const i
 	std::cout << "Active renderer: " << renderer_str << std::endl;
 	std::cout << "OpenGL version: " << version_str << std::endl;
 
-	// TODO: set a callback for key press detection
 	glfwSetInputMode(window_, GLFW_STICKY_KEYS, GL_TRUE);
 
 	glfwSetWindowUserPointer(window_, this);
