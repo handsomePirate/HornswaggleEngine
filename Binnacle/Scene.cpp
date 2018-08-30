@@ -388,6 +388,8 @@ model::model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices
 	std::vector<glm::vec4> positions;
 	std::vector<glm::vec2> uv_coords;
 
+	std::map<unsigned int, unsigned short> index_hash;
+
 	while (ifs.good())
 	{
 		if (ifs.peek() == 'v')
@@ -481,32 +483,30 @@ model::model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices
 				if (third_n == -1)
 				{
 					// TODO: clean up
-					vertices.emplace_back(positions[first_i - 1]);
-					indices.push_back(vertices.size() - 1);
-					vertices.emplace_back(positions[second_i - 1]);
-					indices.push_back(vertices.size() - 1);
-					vertices.emplace_back(positions[third_i - 1]);
-					indices.push_back(vertices.size() - 1);
+
+					auto hash1 = hash_3(positions[first_i - 1]);
+					const auto it = index_hash.find(hash1);
+					if (it == index_hash.end() || !compare_vectors(vertices[it->second].get_position(), positions[first_i - 1]))
+						emplace_vertex(vertices, positions[first_i - 1], glm::vec3(), glm::vec2(), indices);
+					else
+						indices.push_back(it->second);
+
+					emplace_vertex(vertices, positions[second_i - 1], glm::vec3(), glm::vec2(), indices);
+					emplace_vertex(vertices, positions[third_i - 1], glm::vec3(), glm::vec2(), indices);
 				}
 				else
 				{
 					if (third_u == -1)
 					{
-						vertices.emplace_back(positions[first_i - 1], normals[first_n - 1]);
-						indices.push_back(vertices.size() - 1);
-						vertices.emplace_back(positions[second_i - 1], normals[second_n - 1]);
-						indices.push_back(vertices.size() - 1);
-						vertices.emplace_back(positions[third_i - 1], normals[third_n - 1]);
-						indices.push_back(vertices.size() - 1);
+						emplace_vertex(vertices, positions[first_i - 1], normals[first_n - 1], glm::vec2(), indices);
+						emplace_vertex(vertices, positions[second_i - 1], normals[second_n - 1], glm::vec2(), indices);
+						emplace_vertex(vertices, positions[third_i - 1], normals[third_n - 1], glm::vec2(), indices);
 					}
 					else
 					{
-						vertices.emplace_back(positions[first_i - 1], normals[first_n - 1], uv_coords[first_u - 1]);
-						indices.push_back(vertices.size() - 1);
-						vertices.emplace_back(positions[second_i - 1], normals[second_n - 1], uv_coords[second_u - 1]);
-						indices.push_back(vertices.size() - 1);
-						vertices.emplace_back(positions[third_i - 1], normals[third_n - 1], uv_coords[third_u - 1]);
-						indices.push_back(vertices.size() - 1);
+						emplace_vertex(vertices, positions[first_i - 1], normals[first_n - 1], uv_coords[first_u - 1], indices);
+						emplace_vertex(vertices, positions[second_i - 1], normals[second_n - 1], uv_coords[second_u - 1], indices);
+						emplace_vertex(vertices, positions[third_i - 1], normals[third_n - 1], uv_coords[third_u - 1], indices);
 					}
 				}
 
@@ -633,6 +633,62 @@ void model::assign_scale(const float x, const float y, const float z)
 void model::rotate(const glm::vec3&& axis, const float angle)
 {
 	rotate(axis, angle);
+}
+
+unsigned model::hash_3(glm::vec3 v)
+{
+	return 1; // TODO
+}
+
+unsigned short model::emplace_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, const glm::vec3& norm,
+	const glm::vec2& uv, std::vector<unsigned short>& indices)
+{
+	vertices.emplace_back(pos, norm, uv);
+	indices.push_back(vertices.size() - 1);
+
+	return vertices.size() - 1;
+}
+
+void model::process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, const glm::vec3& norm,
+	const glm::vec2& uv, std::vector<unsigned short>& indices, std::map<unsigned int, unsigned short>& index_hash)
+{
+	const auto hash = hash_3(pos);
+	const auto it = index_hash.find(hash);
+	if (it == index_hash.end() || !compare_vectors(vertices[it->second].get_position(), pos))
+		index_hash[hash] = emplace_vertex(vertices, pos, norm, uv, indices);
+	else
+	{
+		if (norm.x == 0 && norm.y == 0 && norm.z == 0 || compare_vectors(vertices[it->second].get_normal(), norm))
+			indices.push_back(it->second);
+		else
+		{
+			//vertices[it->second].set_normal(interpolated); // set weight in normal setting
+			if (uv.x == 0 && uv.y == 0 || compare_vectors(vertices[it->second].get_uv_coords(), uv))
+				indices.push_back(it->second);
+			else
+				index_hash[hash] = emplace_vertex(vertices, pos, norm, uv, indices); // TODO: add linked list to be able to have multiple indices in one hash
+		}
+	}
+}
+
+bool model::compare_vectors(const glm::vec2& v1, const glm::vec2& v2)
+{
+	// TODO
+}
+
+bool model::compare_vectors(const glm::vec3& v1, const glm::vec3& v2)
+{
+	// TODO
+}
+
+bool model::compare_vectors(const glm::vec4& v1, const glm::vec4& v2)
+{
+	// TODO
+}
+
+bool model::compare_vertices(const vertex& v1, const vertex& v2)
+{
+	// TODO
 }
 
 scene::scene()

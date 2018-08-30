@@ -1,4 +1,6 @@
 // Manager
+#include <iostream>
+
 #include "RenderManager.hpp"
 
 int main(int argc, char **argv)

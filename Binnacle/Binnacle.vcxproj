@@ -130,6 +130,7 @@
     <ClCompile Include="Texture.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BitHelper.hpp" />
     <ClInclude Include="Shader.hpp" />
     <ClInclude Include="MathHelper.hpp" />
     <ClInclude Include="Renderer.hpp" />

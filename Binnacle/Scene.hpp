@@ -255,6 +255,18 @@ struct model
 
 private:
 	void rotate(const glm::vec3&& axis, float angle);
+	static unsigned int hash_3(glm::vec3 v);
+
+	static unsigned short emplace_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, const glm::vec3& norm, 
+		const glm::vec2& uv, std::vector<unsigned short>& indices);
+
+	static void process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, const glm::vec3& norm,
+		const glm::vec2& uv, std::vector<unsigned short>& indices, std::map<unsigned int, unsigned short>& index_hash);
+
+	static bool compare_vectors(const glm::vec2& v1, const glm::vec2& v2);
+	static bool compare_vectors(const glm::vec3& v1, const glm::vec3& v2);
+	static bool compare_vectors(const glm::vec4& v1, const glm::vec4& v2);
+	static bool compare_vertices(const vertex& v1, const vertex& v2);
 
 	int vertices_index_;
 	int indices_index_;
