@@ -27,7 +27,7 @@ void main(void)
 
 	//diffuse = vec4(vec3(1.0, 1.0, 1.0) - diffuse.rgb, diffuse.a);
 
-	const float ambience_c = 0.12;
+	const float ambience_c = 0.2;
 	const float diffuse_c = 1.0;
 	const float specular_c = 0.2;
 
@@ -37,7 +37,9 @@ void main(void)
 	float kd = diffuse_c / c_sum;
 	float ks = specular_c / c_sum;
 
-	vec3 Ea = (ka * vec4(0.8, 0.6, 1.0, 1.0)).rgb;
+	vec3 occlusion_factor = vec3(0.95, 0.9, 1.0);
+	vec3 occlusion_color = vec3(occlusion_factor.x * diffuse.x, occlusion_factor.y * diffuse.y, occlusion_factor.z * diffuse.z);
+	vec3 Ea = (ka * occlusion_color).rgb;
 
 	vec3 E_sum = vec3(0, 0, 0);
 		
@@ -50,7 +52,8 @@ void main(void)
 		vec3 R = normalize(2 * norm * dot(norm, L) - L);
 		vec3 V = normalize(camera - position.xyz);
 		
-		float cosa = dot(L,norm);
+		float cosa = dot(L, norm);
+		if (cosa < 0) cosa = 0;
 		vec3 Ed = (kd * diffuse * Id * cosa).rgb;
 		
 		float cosb = dot(R, V);

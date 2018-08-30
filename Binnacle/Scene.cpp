@@ -528,13 +528,13 @@ int model::get_index() const
 
 int model::transform_vertices_to(vertex *curr, vertex *pos, const int index)
 {
-	model_matrix_ = mat4_cast(orientation_) * glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(position_)), scale_);
+	model_matrix_ = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(position_)), scale_);
 
 	for (unsigned int i = 0; i < vertex_count_; ++i)
 	{
 		*pos = *curr;
 
-		pos->set_position(model_matrix_ * curr->get_position());
+		pos->set_position(orientation_ * (model_matrix_ * curr->get_position()));
 		pos->set_normal(orientation_ * curr->get_normal());
 
 		++pos;
