@@ -43,9 +43,9 @@ struct render_manager
 	void change_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, float fov, float aspect, float z_near, float z_far) const;
 	camera& get_camera() const;
 
-	void load_model(const std::string& filename_model, int mat_id = -1) const;
+	void load_model(const std::string& filename_model, bool smooth, int mat_id = -1);
 	int create_material(GLuint program, const std::string& filename_texture = "", bool smooth = false);
-	int create_material(GLuint program, const glm::vec3& color, bool smooth = false);
+	int create_material(GLuint program, const glm::vec3& color);
 	void delete_material(int index);
 
 	float get_fps();
@@ -93,6 +93,8 @@ private:
 	unsigned long frame_count_ = 0;
 
 	bool first_update_ = true;
+
+	unsigned int vertex_count_ = 0;
 };
 
 

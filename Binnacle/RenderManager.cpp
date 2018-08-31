@@ -165,9 +165,9 @@ camera& render_manager::get_camera() const
 	return env_ptr_->get_camera();
 }
 
-void render_manager::load_model(const std::string& filename_model, const int mat_id) const
+void render_manager::load_model(const std::string& filename_model, const bool smooth, const int mat_id)
 {
-	scn_ptr_->load_model(filename_model, mat_id);
+	vertex_count_ += scn_ptr_->load_model(filename_model, smooth, mat_id);
 }
 
 #define ASSIGN_FREE_ID(free_vec, next_free)\
@@ -179,16 +179,16 @@ void render_manager::load_model(const std::string& filename_model, const int mat
 int render_manager::create_material(const GLuint program, const std::string& filename_texture, const bool smooth)
 {
 	ASSIGN_FREE_ID(free_ids_, next_free_id_);
-	(*mat_ptr_)[id] = material(filename_texture, program, smooth);
+	(*mat_ptr_)[id] = material(filename_texture, program);
 	scn_ptr_->use_material(id);
 
 	return id;
 }
 
-int render_manager::create_material(const GLuint program, const glm::vec3& color, const bool smooth)
+int render_manager::create_material(const GLuint program, const glm::vec3& color)
 {
 	ASSIGN_FREE_ID(free_ids_, next_free_id_);
-	(*mat_ptr_)[id] = material(color, program, smooth);
+	(*mat_ptr_)[id] = material(color, program);
 	scn_ptr_->use_material(id);
 
 	return id;
@@ -292,9 +292,10 @@ void render_manager::key_callback(GLFWwindow* window, const int key, const int s
 	{
 		reset_camera_ = !reset_camera_;
 	}
-	if (keys_manager_[GLFW_KEY_F] && action == GLFW_PRESS)
+	if (keys_manager_[GLFW_KEY_I] && action == GLFW_PRESS)
 	{
-		std::cout << get_fps() << std::endl;
+		std::cout << "vertex count: " << vertex_count_ << std::endl;
+		std::cout << "FPS: " << get_fps() << std::endl;
 	}
 
 	if (key == GLFW_KEY_ESCAPE)

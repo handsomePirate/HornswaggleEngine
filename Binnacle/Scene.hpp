@@ -234,7 +234,7 @@ private:
 
 struct model
 {
-	model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, const std::string& filename_model, int mat_id); // TODO: move scene loading to another project
+	model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, const std::string& filename_model, bool smooth, int mat_id); // TODO: move scene loading to another project
 	
 	int get_index() const;
 	int transform_vertices_to(vertex *curr, vertex *pos, int index);
@@ -253,15 +253,20 @@ struct model
 	void assign_scale(const glm::vec3& scale);
 	void assign_scale(float x, float y, float z);
 
+	unsigned int get_vertex_count() const;
+
 private:
 	void rotate(const glm::vec3&& axis, float angle);
-	static unsigned int hash_3(glm::vec3 v);
+	static unsigned short hash_3(const vertex& v);
 
-	static unsigned short emplace_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, const glm::vec3& norm, 
-		const glm::vec2& uv, std::vector<unsigned short>& indices);
+	static unsigned short emplace_vertex(std::vector<vertex>& vertices, const vertex& v, std::vector<unsigned short>& indices);
 
-	static void process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, const glm::vec3& norm,
-		const glm::vec2& uv, std::vector<unsigned short>& indices, std::map<unsigned int, unsigned short>& index_hash);
+	static void process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, const glm::vec3& norm, const glm::vec2& uv, 
+		unsigned int id, std::vector<unsigned short>& indices, std::map<unsigned int, std::map<unsigned short, std::pair<int, std::vector<unsigned short>>>>& index_hash);
+
+	static int find_match(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, const vertex& v);
+
+	static void interpolate_normals(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, int weight, vertex& v);
 
 	static bool compare_vectors(const glm::vec2& v1, const glm::vec2& v2);
 	static bool compare_vectors(const glm::vec3& v1, const glm::vec3& v2);
@@ -298,7 +303,7 @@ struct scene
 	scene& operator=(scene && rm) = default;
 	virtual ~scene() = default;
 
-	void load_model(const std::string& filename_model, int mat_id = -1);
+	unsigned int load_model(const std::string& filename_model, bool smooth, int mat_id = -1);
 	void update();
 
 	void use_material(int mat_id);

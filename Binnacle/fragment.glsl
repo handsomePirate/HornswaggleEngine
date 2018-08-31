@@ -20,17 +20,14 @@ uniform vec3 camera;
 uniform bool useTexture;
 uniform vec3 matColor;
 
-uniform bool smoothShading;
+//uniform bool smoothShading;
 
 out vec4 fragColor;
 
 void main(void)
 {
 	vec3 normal;
-	if (smoothShading)
-		normal = varNorm;
-	else
-		normal = norm;
+	normal = varNorm;
 
 	vec3 diffuse_color;
 	// Sampling from texture
@@ -66,6 +63,7 @@ void main(void)
 		
 		float cosa = dot(L, normal);
 		if (cosa < 0) cosa = 0;
+
 		vec3 Ed = kd * diffuse_color * Id * cosa;
 		
 		float cosb = dot(R, V);
@@ -87,5 +85,5 @@ void main(void)
 	vec3 result = Ea + E_sum;
 
 	fragColor = vec4(result, 1.0);
-	fragColor = vec4(abs(normal), 1.0);
+	//fragColor = vec4(abs(varNorm), 1.0);
 }

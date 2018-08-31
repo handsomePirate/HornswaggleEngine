@@ -194,16 +194,16 @@ void shader_program::update(const std::shared_ptr<environment>& env_ptr) const
 }
 
 material::material()
-	: use_texture_(false), color_(0.0f, 0.0f, 0.0f), program_(0), smooth_(false), initialized_(false) {}
+	: use_texture_(false), color_(0.0f, 0.0f, 0.0f), program_(0), initialized_(false) {}
 
-material::material(const GLuint program, const bool smooth)
-	: use_texture_(true), color_(0.0f, 0.0f, 0.0f), program_(program), smooth_(smooth), initialized_(true) {}
+material::material(const GLuint program)
+	: use_texture_(true), color_(0.0f, 0.0f, 0.0f), program_(program), initialized_(true) {}
 
-material::material(const std::string& filename_texture, const GLuint program, const bool smooth)
-	: texture_(filename_texture), use_texture_(true), color_(0.0f, 0.0f, 0.0f), program_(program), smooth_(smooth), initialized_(true) {}
+material::material(const std::string& filename_texture, const GLuint program)
+	: texture_(filename_texture), use_texture_(true), color_(0.0f, 0.0f, 0.0f), program_(program), initialized_(true) {}
 
-material::material(const glm::vec3& color, const GLuint program, const bool smooth)
-	: use_texture_(false), color_(color), program_(program), smooth_(smooth), initialized_(true) {}
+material::material(const glm::vec3& color, const GLuint program)
+	: use_texture_(false), color_(color), program_(program), initialized_(true) {}
 
 void material::set_as_active() const
 {
@@ -233,7 +233,4 @@ void material::update()
 	// The texture samplers
 	const auto tex_sampler_loc = glGetUniformLocation(program_, "texSampler");
 	glUniform1i(tex_sampler_loc, 0);
-
-	const auto smooth_loc = glGetUniformLocation(program_, "smoothShading");
-	glUniform1i(smooth_loc, smooth_);
 }
