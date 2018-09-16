@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <GL/glew.h>
+#include <SOIL/SOIL.h>
 
 #include "RenderManager.hpp"
 
@@ -180,6 +181,7 @@ int render_manager::create_material(const GLuint program, const std::string& fil
 {
 	ASSIGN_FREE_ID(free_ids_, next_free_id_);
 	(*mat_ptr_)[id] = material(filename_texture, program);
+	
 	scn_ptr_->use_material(id);
 
 	return id;
@@ -189,6 +191,7 @@ int render_manager::create_material(const GLuint program, const glm::vec3& color
 {
 	ASSIGN_FREE_ID(free_ids_, next_free_id_);
 	(*mat_ptr_)[id] = material(color, program);
+
 	scn_ptr_->use_material(id);
 
 	return id;
@@ -203,13 +206,60 @@ void render_manager::delete_material(const int index)
 	}
 }
 
+void render_manager::load_environment_cube_map(const std::string& neg_z, const std::string& pos_z,
+	const std::string& neg_x, const std::string& pos_x, const std::string& neg_y, const std::string& pos_y) const
+{
+	if (!env_ptr_)
+		return;
+
+	GLuint tex_id;
+	glGenTextures(1, &tex_id);
+
+	glActiveTexture(GL_TEXTURE31);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, tex_id);
+
+	int width, height;
+	unsigned char *image = SOIL_load_image(pos_x.c_str(), &width, &height, nullptr, SOIL_LOAD_RGB);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	SOIL_free_image_data(image);
+
+	image = SOIL_load_image(neg_x.c_str(), &width, &height, nullptr, SOIL_LOAD_RGB);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	SOIL_free_image_data(image);
+
+	image = SOIL_load_image(pos_z.c_str(), &width, &height, nullptr, SOIL_LOAD_RGB);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	SOIL_free_image_data(image);
+
+	image = SOIL_load_image(neg_z.c_str(), &width, &height, nullptr, SOIL_LOAD_RGB);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	SOIL_free_image_data(image);
+
+	image = SOIL_load_image(pos_y.c_str(), &width, &height, nullptr, SOIL_LOAD_RGB);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	SOIL_free_image_data(image);
+
+	image = SOIL_load_image(neg_y.c_str(), &width, &height, nullptr, SOIL_LOAD_RGB);
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	SOIL_free_image_data(image);
+
+	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	env_ptr_->set_environment_map(tex_id);
+}
+
+#define time_now std::chrono::high_resolution_clock::now()
+
 float render_manager::get_fps()
 {
-	const auto frame_end = std::chrono::high_resolution_clock::now();
-	const auto duration = frame_end - frame_start_;
-	auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(duration);
-	const float result = frame_count_ / (milliseconds.count() * 0.001f);
-	frame_start_ = std::chrono::high_resolution_clock::now();
+	const auto result = frame_count_ / get_seconds(frame_start_);
+	frame_start_ = time_now;
 	frame_count_ = 0;
 	return result;
 }
@@ -218,7 +268,7 @@ void render_manager::update()
 {
 	if (first_update_)
 	{
-		frame_start_ = std::chrono::high_resolution_clock::now();
+		frame_start_ = time_now;
 		frame_count_ = 0;
 		first_update_ = false;
 	}
@@ -232,7 +282,11 @@ void render_manager::update()
 
 		get_camera().set_aspect(width_ / static_cast<float>(height_));
 
-		const float speed = 0.05f;
+		const auto time_elapsed = get_seconds(last_update_);
+		last_update_ = time_now;
+		++frame_count_;
+		const float speed = 5.0f * time_elapsed;
+
 		if (keys_manager_[GLFW_KEY_A] || keys_manager_[GLFW_KEY_LEFT])
 			get_camera().translate_local_2_d(speed, 0.0f, 0.0f);
 		if (keys_manager_[GLFW_KEY_D] || keys_manager_[GLFW_KEY_RIGHT])
@@ -241,6 +295,10 @@ void render_manager::update()
 			get_camera().translate_local_2_d(0.0f, 0.0f, speed);
 		if (keys_manager_[GLFW_KEY_S] || keys_manager_[GLFW_KEY_DOWN])
 			get_camera().translate_local_2_d(0.0f, 0.0f, -speed);
+		if (keys_manager_[GLFW_KEY_LEFT_SHIFT] || keys_manager_[GLFW_KEY_DOWN])
+			get_camera().translate(0.0f, speed, 0.0f);
+		if (keys_manager_[GLFW_KEY_LEFT_CONTROL] || keys_manager_[GLFW_KEY_DOWN])
+			get_camera().translate(0.0f, -speed, 0.0f);
 
 		if (reset_camera_)
 		{
@@ -257,8 +315,6 @@ void render_manager::update()
 		for (auto && shd : *shd_ptr_)
 			shd.second.update(env_ptr_);
 	}
-
-	++frame_count_;
 }
 
 
@@ -331,6 +387,15 @@ void render_manager::window_resize_callback(GLFWwindow* window, const int width,
 	height_ = height;
 
 	glViewport(0, 0, width, height);
+}
+
+float render_manager::get_seconds(const std::chrono::high_resolution_clock::time_point& frame_start) const
+{
+	const auto frame_end = time_now;
+	const auto duration = frame_end - frame_start;
+	auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+
+	return milliseconds.count() * 0.001f;
 }
 
 render_manager::~render_manager()

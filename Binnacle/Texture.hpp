@@ -10,8 +10,9 @@ struct texture
 
 	texture();
 	explicit texture(const std::string& filename);
-
 	texture(const std::string& filename, const std::string& name);
+
+	void destroy() const;
 
 	void bind_to_unit(int unit) const;
 };

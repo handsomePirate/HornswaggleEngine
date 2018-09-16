@@ -43,8 +43,9 @@ void renderer::render(const std::shared_ptr<scene>& scn_ptr, const std::shared_p
 
 	for (auto && mat : *mat_ptr)
 	{
-		mat.second.update();
 		mat.second.set_as_active();
+		mat.second.update();
+
 		const auto& vertices = scn_ptr->get_vertices(mat.first);
 		if (vertices.empty())
 		{

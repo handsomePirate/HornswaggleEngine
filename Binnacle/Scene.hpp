@@ -121,12 +121,25 @@ struct environment
 	const std::vector<glm::vec3>& get_light_colors() const;
 	const std::vector<float>& get_light_diffuse_intensities() const;
 	const std::vector<float>& get_light_specular_intensities() const;
+
+	void set_environment_map(GLuint id);
+	bool has_env_map() const;
+
+	void shader_load_env_map(GLuint program) const;
+	bool changed() const;
+	void unset_changed();
+
 private:
 	std::vector<glm::vec3> light_positions_;
 	std::vector<glm::vec3> light_colors_;
 	std::vector<float> light_diffuse_intensities_;
 	std::vector<float> light_specular_intensities_;
 	camera camera_;
+
+	bool has_environment_map_ = false;
+	GLuint environment_map_;
+
+	bool changed_ = true;
 };
 
 template <class ... T>
@@ -281,9 +294,9 @@ private:
 	unsigned int index_count_;
 
 	glm::mat4 model_matrix_{};
-	glm::quat orientation_;
-	glm::vec4 position_;
-	glm::vec3 scale_;
+	glm::quat orientation_{};
+	glm::vec4 position_{};
+	glm::vec3 scale_{};
 };
 
 struct material_pack
@@ -303,13 +316,13 @@ struct scene
 	scene& operator=(scene && rm) = default;
 	virtual ~scene() = default;
 
-	unsigned int load_model(const std::string& filename_model, bool smooth, int mat_id = -1);
-	void update();
+	unsigned int load_model(const std::string& filename_model, bool smooth, int mat_id = -1) const;
+	void update() const;
 
-	void use_material(int mat_id);
-	void disable_material(int mat_id);
+	void use_material(int mat_id) const;
+	void disable_material(int mat_id) const;
 
-	const std::vector<vertex>& get_vertices(int mat_id);
+	const std::vector<vertex>& get_vertices(int mat_id) const;
 	const std::vector<unsigned short>& get_indices(int mat_id) const;
 private:
 	std::unique_ptr<std::map<int, material_pack>> pck_ptr_;

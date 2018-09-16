@@ -20,8 +20,6 @@ uniform vec3 camera;
 uniform bool useTexture;
 uniform vec3 matColor;
 
-//uniform bool smoothShading;
-
 out vec4 fragColor;
 
 void main(void)
@@ -31,6 +29,7 @@ void main(void)
 
 	vec3 diffuse_color;
 	// Sampling from texture
+
 	if (useTexture)
 		diffuse_color = vec3(texture(texSampler, coords));
 	else
@@ -47,7 +46,7 @@ void main(void)
 	float ks = specular_c / c_sum;
 
 	vec3 occlusion_factor = vec3(0.95, 0.9, 1.0);
-	vec3 occlusion_color = vec3(occlusion_factor.x * diffuse_color.x, occlusion_factor.y * diffuse_color.y, occlusion_factor.z * diffuse_color.z);
+	vec3 occlusion_color = diffuse_color * occlusion_factor;
 	vec3 Ea = (ka * occlusion_color).rgb;
 
 	vec3 E_sum = vec3(0, 0, 0);
@@ -64,7 +63,7 @@ void main(void)
 		float cosa = dot(L, normal);
 		if (cosa < 0) cosa = 0;
 
-		vec3 Ed = kd * diffuse_color * Id * cosa;
+		vec3 Ed = kd * (diffuse_color * lightColors[i]) * Id * cosa;
 		
 		float cosb = dot(R, V);
 

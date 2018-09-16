@@ -7,7 +7,7 @@ shader::shader()
 	: text_length(0), text(nullptr) {}
 
 shader::shader(const GLint text_length, const std::string&  text)
-	: text_length(text_length), text(std::move(text)) {}
+	: text_length(text_length), text(text) {}
 
 shader_program::shader_program()
 {
@@ -160,6 +160,8 @@ GLuint shader_program::get_id() const
 
 void shader_program::update(const std::shared_ptr<environment>& env_ptr) const
 {
+	glUseProgram(program_);
+
 	// The camera uniform
 	const auto camera_loc = glGetUniformLocation(program_, "camera"); // TODO: move the location retrieval
 	glUniform3fv(camera_loc, 1, &env_ptr->get_camera().get_position()[0]);
@@ -171,26 +173,37 @@ void shader_program::update(const std::shared_ptr<environment>& env_ptr) const
 	const auto view_projection_matrix = projection_matrix * view_matrix;
 	glUniformMatrix4fv(projection_view_matrix_loc, 1, GL_FALSE, &view_projection_matrix[0][0]);
 
-	// The lights uniform
-	const auto light_pos_loc = glGetUniformLocation(program_, "lightPositions");
-	const auto light_pos = env_ptr->get_light_positions();
-	glUniform3fv(light_pos_loc, light_pos.size(), &light_pos[0][0]);
+	if (env_ptr->changed())
+	{
+		env_ptr->unset_changed();
+		if (env_ptr->has_env_map())
+		{
+			env_ptr->shader_load_env_map(program_);
+		}
+		else
+		{
+			// The lights uniform
+			const auto light_pos_loc = glGetUniformLocation(program_, "lightPositions");
+			const auto light_pos = env_ptr->get_light_positions();
+			glUniform3fv(light_pos_loc, light_pos.size(), &light_pos[0][0]);
 
-	const int light_count_limit = 20;
-	const auto lights_count_loc = glGetUniformLocation(program_, "lightsCount");
-	glUniform1i(lights_count_loc, light_pos.size() > light_count_limit ? light_count_limit : light_pos.size());
+			const int light_count_limit = 20;
+			const auto lights_count_loc = glGetUniformLocation(program_, "lightsCount");
+			glUniform1i(lights_count_loc, light_pos.size() > light_count_limit ? light_count_limit : light_pos.size());
 
-	const auto light_col_loc = glGetUniformLocation(program_, "lightColors");
-	const auto light_col = env_ptr->get_light_colors();
-	glUniform3fv(light_col_loc, light_col.size(), &light_col[0][0]);
+			const auto light_col_loc = glGetUniformLocation(program_, "lightColors");
+			const auto light_col = env_ptr->get_light_colors();
+			glUniform3fv(light_col_loc, light_col.size(), &light_col[0][0]);
 
-	const auto lights_diff_loc = glGetUniformLocation(program_, "lightDiffI");
-	const auto lights_diff = env_ptr->get_light_diffuse_intensities();
-	glUniform1fv(lights_diff_loc, lights_diff.size(), &lights_diff[0]);
+			const auto lights_diff_loc = glGetUniformLocation(program_, "lightDiffI");
+			const auto lights_diff = env_ptr->get_light_diffuse_intensities();
+			glUniform1fv(lights_diff_loc, lights_diff.size(), &lights_diff[0]);
 
-	const auto lights_spec_loc = glGetUniformLocation(program_, "lightSpecI");
-	const auto lights_spec = env_ptr->get_light_specular_intensities();
-	glUniform1fv(lights_spec_loc, lights_spec.size(), &lights_spec[0]);
+			const auto lights_spec_loc = glGetUniformLocation(program_, "lightSpecI");
+			const auto lights_spec = env_ptr->get_light_specular_intensities();
+			glUniform1fv(lights_spec_loc, lights_spec.size(), &lights_spec[0]);
+		}
+	}
 }
 
 material::material()
@@ -211,8 +224,7 @@ void material::set_as_active() const
 	{
 		glUseProgram(program_);
 
-		if (use_texture_)
-			texture_.bind_to_unit(0);
+		texture_.bind_to_unit(0);
 	}
 }
 
@@ -226,7 +238,7 @@ void material::update()
 {
 	const auto use_texture_loc = glGetUniformLocation(program_, "useTexture");
 	glUniform1i(use_texture_loc, use_texture_);
-
+	
 	const auto mat_color_loc = glGetUniformLocation(program_, "matColor");
 	glUniform3fv(mat_color_loc, 1, &color_[0]);
 

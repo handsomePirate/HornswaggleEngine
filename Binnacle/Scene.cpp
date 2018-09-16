@@ -345,7 +345,9 @@ float light::get_specular_intensity() const
 }
 
 environment::environment(camera& cam)
-	: camera_(cam) { }
+	: camera_(cam), environment_map_(0)
+{
+}
 
 camera& environment::get_camera()
 {
@@ -370,6 +372,36 @@ const std::vector<float>& environment::get_light_diffuse_intensities() const
 const std::vector<float>& environment::get_light_specular_intensities() const
 {
 	return light_specular_intensities_;
+}
+
+void environment::set_environment_map(const GLuint id)
+{
+	environment_map_ = id;
+	has_environment_map_ = true;
+}
+
+bool environment::has_env_map() const
+{
+	return has_environment_map_;
+}
+
+void environment::shader_load_env_map(const GLuint program) const
+{
+	glActiveTexture(GL_TEXTURE31);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, environment_map_);
+
+	const auto cubemap_loc = glGetUniformLocation(program, "cubemap");
+	glUniform1i(cubemap_loc, 31);
+}
+
+bool environment::changed() const
+{
+	return changed_;
+}
+
+void environment::unset_changed()
+{
+	changed_ = false;
 }
 
 #define DEBUG_LIMIT_INDICES_ 3
@@ -799,23 +831,24 @@ scene::scene()
 	use_material(-1);
 }
 
-unsigned int scene::load_model(const std::string& filename_model, bool smooth, int mat_id)
+unsigned int scene::load_model(const std::string& filename_model, bool smooth, int mat_id) const
 {
 	if (pck_ptr_->find(mat_id) != pck_ptr_->end())
 	{
 		(*pck_ptr_)[mat_id].models_.emplace_back((*pck_ptr_)[mat_id].vertices_, (*pck_ptr_)[mat_id].indices_, filename_model, smooth, mat_id);
 		return (*pck_ptr_)[mat_id].models_[(*pck_ptr_)[mat_id].models_.size() - 1].get_vertex_count();
 	}
+	return 0;
 	// TODO: do this in the material pack structure
 }
 
-void scene::update()
+void scene::update() const
 {
 	if (pck_ptr_->size() > 1)
 	{
 		if (!(*pck_ptr_)[0].models_.empty())
 		{
-			(*pck_ptr_)[0].models_[0].rotate(1, 0, 0, 0.02f);
+			//(*pck_ptr_)[0].models_[0].rotate(1, 0, 0, 0.02f);
 			(*pck_ptr_)[0].models_[0].assign_position(-0.6, 0, 0);
 			(*pck_ptr_)[0].models_[0].assign_scale(0.4, 0.4, 0.4);
 			if (pck_ptr_->size() > 2 && !(*pck_ptr_)[1].models_.empty())
@@ -827,17 +860,17 @@ void scene::update()
 	}
 }
 
-void scene::use_material(const int mat_id)
+void scene::use_material(const int mat_id) const
 {
 	(*pck_ptr_)[mat_id] = material_pack();
 }
 
-void scene::disable_material(int mat_id)
+void scene::disable_material(const int mat_id) const
 {
 	pck_ptr_->erase(mat_id);
 }
 
-const std::vector<vertex>& scene::get_vertices(const int mat_id)
+const std::vector<vertex>& scene::get_vertices(const int mat_id) const
 {
 	(*pck_ptr_)[mat_id].transformed_vertices_.resize((*pck_ptr_)[mat_id].vertices_.size());
 #ifdef DEBUG_LIMIT_INDICES

@@ -7,7 +7,7 @@ layout(location = 3) in vec2 vertexCoords;
 
 smooth out vec3 color;
 flat out vec3 norm;
-smooth out vec3 varNorm;
+varying out vec3 varNorm;
 smooth out vec4 position;
 smooth out vec2 coords;
 //out float texUnit;

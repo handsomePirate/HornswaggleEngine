@@ -48,6 +48,10 @@ struct render_manager
 	int create_material(GLuint program, const glm::vec3& color);
 	void delete_material(int index);
 
+	void load_environment_cube_map(const std::string& neg_z, const std::string& pos_z, 
+								   const std::string& neg_x, const std::string& pos_x, 
+								   const std::string& neg_y, const std::string& pos_y) const;
+
 	float get_fps();
 
 	void update();
@@ -58,6 +62,8 @@ private:
 	virtual void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 	virtual void mouse_move_callback(GLFWwindow *window, double x_pos, double y_pos);
 	virtual void window_resize_callback(GLFWwindow *window, int width, int height);
+
+	float get_seconds(const std::chrono::high_resolution_clock::time_point& frame_start) const;
 
 	std::unique_ptr<renderer> rnd_ptr_;
 	std::shared_ptr<scene> scn_ptr_;
@@ -91,6 +97,8 @@ private:
 
 	std::chrono::high_resolution_clock::time_point frame_start_;
 	unsigned long frame_count_ = 0;
+
+	std::chrono::high_resolution_clock::time_point last_update_;
 
 	bool first_update_ = true;
 

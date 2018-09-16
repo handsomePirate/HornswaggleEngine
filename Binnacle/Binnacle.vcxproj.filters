@@ -64,7 +64,10 @@
     <None Include="vertex.glsl">
       <Filter>Shaders</Filter>
     </None>
-    <None Include="fragment.glsl">
+    <None Include="fragment_phong.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="fragment_brdf.glsl">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>
