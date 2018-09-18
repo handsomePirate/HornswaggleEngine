@@ -7,19 +7,26 @@
 
 #include "Renderer.hpp"
 #include "Scene.hpp"
+#include "Binnacle_Render_Manager.hpp"
 #include "Shader.hpp"
 
 #include <GLFW/glfw3.h>
 
-typedef unsigned int rm_choice;
-#define BINNACLE (unsigned int)1
+struct rgba
+{
+	unsigned char r;
+	unsigned char g;
+	unsigned char b;
+	unsigned char a;
+};
 
 // Serves the purpose of maintaining the renderer to use, the scene to render and the window to render to
 // TODO: make it possible to render to texture
 // TODO: monitor window size changes
 struct render_manager
 {
-	render_manager(bool fullscreen, int samples, int major_version, int minor_version, int width, int height, const std::string& window_text);
+	render_manager();
+	render_manager(bool fullscreen, int samples, int major_version, int minor_version, int width, int height, const std::string& window_text, bool window_visible = true);
 	render_manager(const render_manager& rm) = delete;
 	render_manager& operator=(const render_manager& rm) = delete;
 	render_manager(render_manager && rm) = default;
@@ -40,12 +47,19 @@ struct render_manager
 	template<class ...T>
 	void set_lights(T&&... args);
 
+	void init_texture_rendering(int width, int height);
+	unsigned char *render_to_texture(bool screen = false) const;
+
 	void change_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, float fov, float aspect, float z_near, float z_far) const;
 	camera& get_camera() const;
 
 	void load_model(const std::string& filename_model, bool smooth, int mat_id = -1);
-	int create_material(GLuint program, const std::string& filename_texture = "", bool smooth = false);
-	int create_material(GLuint program, const glm::vec3& color);
+	void load_model_data(vertex *vertices, size_t vertex_count, unsigned short *indices, size_t index_count, int mat_id = -1);
+	void load_model_data(float *vertex_positions, size_t vertex_count, unsigned short* indices, size_t index_count, int mat_id = -1);
+
+	int create_material(GLuint program, const std::string& filename_texture = "", const std::string& filename_normals = "");
+	int create_material(GLuint program, const glm::vec3& color, const std::string& filename_normals = "");
+	int create_material(GLuint program, float r, float g, float b, const std::string& filename_normals = "");
 	void delete_material(int index);
 
 	void load_environment_cube_map(const std::string& neg_z, const std::string& pos_z, 
@@ -64,6 +78,8 @@ private:
 	virtual void window_resize_callback(GLFWwindow *window, int width, int height);
 
 	float get_seconds(const std::chrono::high_resolution_clock::time_point& frame_start) const;
+
+	static void reorder_pixels(rgba *pixels, size_t width, size_t height);
 
 	std::unique_ptr<renderer> rnd_ptr_;
 	std::shared_ptr<scene> scn_ptr_;
@@ -103,8 +119,18 @@ private:
 	bool first_update_ = true;
 
 	unsigned int vertex_count_ = 0;
-};
+	unsigned int poly_count_ = 0;
 
+	// texture rendering variables
+	GLuint texture_fbo_ = 0;
+	GLuint rendered_texture_{};
+	GLuint depth_render_buffer_{};
+
+	int texture_width_{};
+	int texture_height_{};
+
+	bool window_visible_;
+};
 
 template <class ... T>
 void render_manager::set_environment(camera&& cam, T&&... args)
@@ -126,3 +152,5 @@ void render_manager::set_lights(T&&... args)
 	if (env_ptr_)
 		env_ptr_->set_lights(std::forward<T>(args)...);
 }
+
+static render_manager *rm;

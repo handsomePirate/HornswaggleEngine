@@ -330,4 +330,7 @@ ASALocalRun/
 
 # Local History for Visual Studio
 .localhistory/
-/Binnacle/cube_tex.png
+
+*.png
+*.tif
+*.bmp

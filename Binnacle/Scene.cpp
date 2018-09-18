@@ -5,6 +5,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
+#include <iostream>
 
 void split_from(const std::string& str, size_t index, const char c, std::string& before, std::string& after)
 {
@@ -122,6 +123,11 @@ void camera::set_focus(glm::vec3& f)
 	focus_ = f;
 }
 
+void camera::set_focus(const float x, const float y, const float z)
+{
+	set_focus(glm::vec3(x, y, z));
+}
+
 void camera::set_forward(glm::vec3& f)
 {
 	focus_ = glm::vec3(position_) + normalize(f);
@@ -130,6 +136,11 @@ void camera::set_forward(glm::vec3& f)
 void camera::set_position(glm::vec3& p)
 {
 	position_ = glm::vec4(p, 1);
+}
+
+void camera::set_position(const float x, const float y, const float z)
+{
+	position_ = glm::vec4(x, y, z, 1);
 }
 
 void camera::set_up(glm::vec3& u)
@@ -318,7 +329,7 @@ void camera::create_projection_matrix()
 
 void camera::create_view_matrix()
 {
-	view_matrix_ = lookAt(glm::vec3(position_), glm::vec3(focus_), glm::vec3(up_));
+	view_matrix_ = lookAt(glm::vec3(position_), focus_, up_);
 }
 
 light::light(const glm::vec3& position, const glm::vec3& color, const float diffuse_intensity, const float specular_intensity)
@@ -406,7 +417,7 @@ void environment::unset_changed()
 
 #define DEBUG_LIMIT_INDICES_ 3
 
-model::model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, const std::string& filename_model, bool smooth, const int mat_id)
+model::model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, const std::string& filename_model, const bool smooth, const int mat_id)
 {
 	std::ifstream ifs(filename_model);
 
@@ -516,9 +527,9 @@ model::model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices
 				{
 					if (smooth)
 					{
-						process_vertex(vertices, positions[first_i - 1], glm::vec3(), glm::vec2(), first_i - 1, indices, index_hash);
-						process_vertex(vertices, positions[second_i - 1], glm::vec3(), glm::vec2(), second_i - 1, indices, index_hash);
-						process_vertex(vertices, positions[third_i - 1], glm::vec3(), glm::vec2(), third_i - 1, indices, index_hash);
+						process_vertex(vertices, positions[first_i - 1], glm::vec3(), glm::vec2(), glm::vec3(), first_i - 1, indices, index_hash);
+						process_vertex(vertices, positions[second_i - 1], glm::vec3(), glm::vec2(), glm::vec3(), second_i - 1, indices, index_hash);
+						process_vertex(vertices, positions[third_i - 1], glm::vec3(), glm::vec2(), glm::vec3(), third_i - 1, indices, index_hash);
 					}
 					else
 					{
@@ -533,9 +544,9 @@ model::model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices
 					{
 						if (smooth)
 						{
-							process_vertex(vertices, positions[first_i - 1], normals[first_n - 1], glm::vec2(), first_i - 1, indices, index_hash);
-							process_vertex(vertices, positions[second_i - 1], normals[second_n - 1], glm::vec2(), second_i - 1, indices, index_hash);
-							process_vertex(vertices, positions[third_i - 1], normals[third_n - 1], glm::vec2(), third_i - 1, indices, index_hash);
+							process_vertex(vertices, positions[first_i - 1], normals[first_n - 1], glm::vec2(), glm::vec3(), first_i - 1, indices, index_hash);
+							process_vertex(vertices, positions[second_i - 1], normals[second_n - 1], glm::vec2(), glm::vec3(), second_i - 1, indices, index_hash);
+							process_vertex(vertices, positions[third_i - 1], normals[third_n - 1], glm::vec2(), glm::vec3(), third_i - 1, indices, index_hash);
 						}
 						else
 						{
@@ -546,17 +557,19 @@ model::model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices
 					}
 					else
 					{
+						const auto tangent = compute_tangent(positions[second_i - 1] - positions[first_i - 1], positions[third_i - 1] - positions[first_i - 1],
+															 uv_coords[second_u - 1] - uv_coords[first_u - 1], uv_coords[third_u - 1] - uv_coords[first_u - 1]); // TODO: might need to interpolate later
 						if (smooth)
 						{
-							process_vertex(vertices, positions[first_i - 1], normals[first_n - 1], uv_coords[first_u - 1], first_i - 1, indices, index_hash);
-							process_vertex(vertices, positions[second_i - 1], normals[second_n - 1], uv_coords[second_u - 1], second_i - 1, indices, index_hash);
-							process_vertex(vertices, positions[third_i - 1], normals[third_n - 1], uv_coords[third_u - 1], third_i - 1, indices, index_hash);
+							process_vertex(vertices, positions[first_i - 1], normals[first_n - 1], uv_coords[first_u - 1], tangent, first_i - 1, indices, index_hash);
+							process_vertex(vertices, positions[second_i - 1], normals[second_n - 1], uv_coords[second_u - 1], tangent, second_i - 1, indices, index_hash);
+							process_vertex(vertices, positions[third_i - 1], normals[third_n - 1], uv_coords[third_u - 1], tangent, third_i - 1, indices, index_hash);
 						}
 						else
 						{
-							emplace_vertex(vertices, vertex(positions[first_i - 1], normals[first_n - 1], uv_coords[first_u - 1]), indices);
-							emplace_vertex(vertices, vertex(positions[second_i - 1], normals[second_n - 1], uv_coords[second_u - 1]), indices);
-							emplace_vertex(vertices, vertex(positions[third_i - 1], normals[third_n - 1], uv_coords[third_u - 1]), indices);
+							emplace_vertex(vertices, vertex(positions[first_i - 1], normals[first_n - 1], uv_coords[first_u - 1], tangent), indices);
+							emplace_vertex(vertices, vertex(positions[second_i - 1], normals[second_n - 1], uv_coords[second_u - 1], tangent), indices);
+							emplace_vertex(vertices, vertex(positions[third_i - 1], normals[third_n - 1], uv_coords[third_u - 1], tangent), indices);
 						}
 					}
 				}
@@ -589,6 +602,17 @@ model::model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices
 	vertex_count_ = DEBUG_LIMIT_INDICES;
 	index_count_ = DEBUG_LIMIT_INDICES;
 #endif
+	model_matrix_ = glm::mat4(1.0f);
+	orientation_ = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+	position_ = glm::vec4(0.0f);
+	scale_ = glm::vec3(1.0f);
+}
+
+model::model(const size_t vertex_count, const size_t index_count)
+	: vertices_index_(0), indices_index_(0)
+{
+	vertex_count_ = vertex_count;
+	index_count_ = index_count;
 
 	model_matrix_ = glm::mat4(1.0f);
 	orientation_ = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
@@ -611,6 +635,7 @@ int model::transform_vertices_to(vertex *curr, vertex *pos, const int index)
 
 		pos->set_position(orientation_ * (model_matrix_ * curr->get_position()));
 		pos->set_normal(orientation_ * curr->get_normal());
+		pos->set_tangent(orientation_ * curr->get_tangent());
 
 		++pos;
 		++curr;
@@ -686,6 +711,11 @@ unsigned model::get_vertex_count() const
 	return vertex_count_;
 }
 
+unsigned model::get_poly_count() const
+{
+	return index_count_ / 3;
+}
+
 void model::rotate(const glm::vec3&& axis, const float angle)
 {
 	rotate(axis, angle);
@@ -710,10 +740,10 @@ unsigned short model::emplace_vertex(std::vector<vertex>& vertices, const vertex
 	return vertices.size() - 1;
 }
 
-void model::process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, const glm::vec3& norm, const glm::vec2& uv, unsigned int id, 
+void model::process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, const glm::vec3& norm, const glm::vec2& uv, const glm::vec3& tangent, const unsigned int id, 
 	std::vector<unsigned short>& indices, std::map<unsigned int, std::map<unsigned short, std::pair<int, std::vector<unsigned short>>>>& index_hash)
 {
-	auto v = vertex(pos, norm, uv);
+	auto v = vertex(pos, norm, uv, tangent);
 
 	const auto hash = hash_3(v);
 	const auto it1 = index_hash.find(hash);
@@ -825,39 +855,64 @@ bool model::compare_vertices(const vertex& v1, const vertex& v2)
 		compare_vectors(v1.get_uv_coords(), v2.get_uv_coords());
 }
 
+glm::vec3 model::compute_tangent(const glm::vec3& edge1, const glm::vec3& edge2, const glm::vec2& delta_uv1, const glm::vec2& delta_uv2)
+{
+	glm::vec3 tangent;
+
+	const float f = 1.0f / (delta_uv1.x * delta_uv2.y - delta_uv2.x * delta_uv1.y);
+
+	tangent.x = f * (delta_uv2.y * edge1.x - delta_uv1.y * edge2.x);
+	tangent.y = f * (delta_uv2.y * edge1.y - delta_uv1.y * edge2.y);
+	tangent.z = f * (delta_uv2.y * edge1.z - delta_uv1.y * edge2.z);
+	return normalize(tangent);
+}
+
 scene::scene()
 {
 	pck_ptr_ = std::make_unique<std::map<int, material_pack>>();
 	use_material(-1);
 }
 
-unsigned int scene::load_model(const std::string& filename_model, bool smooth, int mat_id) const
+poly_vert_count_pack scene::load_model(const std::string& filename_model, bool smooth, int mat_id) const
 {
 	if (pck_ptr_->find(mat_id) != pck_ptr_->end())
 	{
 		(*pck_ptr_)[mat_id].models_.emplace_back((*pck_ptr_)[mat_id].vertices_, (*pck_ptr_)[mat_id].indices_, filename_model, smooth, mat_id);
-		return (*pck_ptr_)[mat_id].models_[(*pck_ptr_)[mat_id].models_.size() - 1].get_vertex_count();
+		const auto vc = (*pck_ptr_)[mat_id].models_[(*pck_ptr_)[mat_id].models_.size() - 1].get_vertex_count();
+		const auto pc = (*pck_ptr_)[mat_id].models_[(*pck_ptr_)[mat_id].models_.size() - 1].get_poly_count();
+
+		if (vc == 0)
+			pck_ptr_->erase(pck_ptr_->find(mat_id));
+
+		return poly_vert_count_pack {vc, pc};
 	}
-	return 0;
+	return poly_vert_count_pack{ 0, 0 };;
 	// TODO: do this in the material pack structure
+}
+
+void scene::load_model_data(vertex* vertices, size_t vertex_count, unsigned short* indices, size_t index_count, const int mat_id) const
+{
+	(*pck_ptr_)[mat_id].models_.emplace_back(vertex_count, index_count);
+	(*pck_ptr_)[mat_id].vertices_ = std::vector<vertex>(vertices, vertices + vertex_count);
+	(*pck_ptr_)[mat_id].indices_ = std::vector<unsigned short>(indices, indices + index_count);
 }
 
 void scene::update() const
 {
-	if (pck_ptr_->size() > 1)
-	{
-		if (!(*pck_ptr_)[0].models_.empty())
-		{
-			//(*pck_ptr_)[0].models_[0].rotate(1, 0, 0, 0.02f);
-			(*pck_ptr_)[0].models_[0].assign_position(-0.6, 0, 0);
-			(*pck_ptr_)[0].models_[0].assign_scale(0.4, 0.4, 0.4);
-			if (pck_ptr_->size() > 2 && !(*pck_ptr_)[1].models_.empty())
-			{
-				(*pck_ptr_)[1].models_[0].assign_position(0.6, 0, 0);
-				(*pck_ptr_)[1].models_[0].assign_scale(0.4, 0.4, 0.4);
-			}
-		}
-	}
+	//if (pck_ptr_->size() > 1)
+	//{
+	//	if (!(*pck_ptr_)[0].models_.empty())
+	//	{
+	//		(*pck_ptr_)[0].models_[0].rotate(1, 0, 0, 0.01f);
+	//		(*pck_ptr_)[0].models_[0].assign_position(-0.6, 0, 0);
+	//		(*pck_ptr_)[0].models_[0].assign_scale(0.4, 0.4, 0.4);
+	//		if (pck_ptr_->size() > 2 && !(*pck_ptr_)[1].models_.empty())
+	//		{
+	//			(*pck_ptr_)[1].models_[0].assign_position(0.6, 0, 0);
+	//			(*pck_ptr_)[1].models_[0].assign_scale(0.4, 0.4, 0.4);
+	//		}
+	//	}
+	//}
 }
 
 void scene::use_material(const int mat_id) const

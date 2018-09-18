@@ -13,7 +13,7 @@ renderer::renderer()
 
 	glGenBuffers(1, &vio_);
 
-	const auto stride = sizeof(glm::vec4) + sizeof(glm::vec3) * 2 + sizeof(glm::vec2);
+	const auto stride = sizeof(vertex);//sizeof(glm::vec4) + sizeof(glm::vec3) * 3 + sizeof(glm::vec2);
 	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, stride, nullptr);
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void *>(sizeof(glm::vec4)));
@@ -22,6 +22,8 @@ renderer::renderer()
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void *>(sizeof(glm::vec4) + sizeof(glm::vec3) * 2));
 	glEnableVertexAttribArray(3);
+	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void *>(sizeof(glm::vec4) + sizeof(glm::vec3) * 2 + sizeof(glm::vec2)));
+	glEnableVertexAttribArray(4);
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
@@ -48,9 +50,8 @@ void renderer::render(const std::shared_ptr<scene>& scn_ptr, const std::shared_p
 
 		const auto& vertices = scn_ptr->get_vertices(mat.first);
 		if (vertices.empty())
-		{
 			continue;
-		}
+
 		glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(vertex), &vertices[0], GL_DYNAMIC_DRAW);
 
 		const auto& indices = scn_ptr->get_indices(mat.first);

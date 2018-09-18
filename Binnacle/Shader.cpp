@@ -1,13 +1,14 @@
 #include <fstream>
 #include <iostream>
+#include <utility>
 
 #include "Shader.hpp"
 
 shader::shader()
 	: text_length(0), text(nullptr) {}
 
-shader::shader(const GLint text_length, const std::string&  text)
-	: text_length(text_length), text(text) {}
+shader::shader(const GLint text_length, std::string text)
+	: text_length(text_length), text(std::move(text)) {}
 
 shader_program::shader_program()
 {
@@ -21,7 +22,7 @@ bool shader_program::load_shader(shader_type&& type, const std::string& filename
 	std::ifstream ifs(filename);
 	std::string line;
 
-	if (!ifs.good())
+	if (!ifs.good() || !ifs.is_open())
 		return false;
 
 	while (std::getline(ifs, line).good())
@@ -40,7 +41,7 @@ bool shader_program::load_shader(shader_type&& type, const std::string& filename
 glGetShaderiv(sh, GL_INFO_LOG_LENGTH, &maxLength); \
 std::vector<GLchar> infoLog(maxLength); \
 glGetInfoLogARB(sh, maxLength, &maxLength, &infoLog[0]); \
-std::cout << text << std::endl; \
+std::cout << (text) << std::endl; \
 for (auto && ch : infoLog)\
 std::cout << static_cast<char>(ch); \
 std::cout << std::endl; }
@@ -51,7 +52,7 @@ std::cout << std::endl; }
 glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);\
 std::vector<GLchar> infoLog(maxLength);\
 glGetProgramInfoLog(program, maxLength, &maxLength, &infoLog[0]);\
-std::cout << text << std::endl;\
+std::cout << (text) << std::endl;\
 for (auto && ch : infoLog)\
 std::cout << static_cast<char>(ch);\
 std::cout << std::endl;}
@@ -185,7 +186,8 @@ void shader_program::update(const std::shared_ptr<environment>& env_ptr) const
 			// The lights uniform
 			const auto light_pos_loc = glGetUniformLocation(program_, "lightPositions");
 			const auto light_pos = env_ptr->get_light_positions();
-			glUniform3fv(light_pos_loc, light_pos.size(), &light_pos[0][0]);
+			if (!light_pos.empty())
+				glUniform3fv(light_pos_loc, light_pos.size(), &light_pos[0][0]);
 
 			const int light_count_limit = 20;
 			const auto lights_count_loc = glGetUniformLocation(program_, "lightsCount");
@@ -193,15 +195,18 @@ void shader_program::update(const std::shared_ptr<environment>& env_ptr) const
 
 			const auto light_col_loc = glGetUniformLocation(program_, "lightColors");
 			const auto light_col = env_ptr->get_light_colors();
-			glUniform3fv(light_col_loc, light_col.size(), &light_col[0][0]);
+			if (!light_col.empty())
+				glUniform3fv(light_col_loc, light_col.size(), &light_col[0][0]);
 
 			const auto lights_diff_loc = glGetUniformLocation(program_, "lightDiffI");
 			const auto lights_diff = env_ptr->get_light_diffuse_intensities();
-			glUniform1fv(lights_diff_loc, lights_diff.size(), &lights_diff[0]);
+			if (!lights_diff.empty())
+				glUniform1fv(lights_diff_loc, lights_diff.size(), &lights_diff[0]);
 
 			const auto lights_spec_loc = glGetUniformLocation(program_, "lightSpecI");
 			const auto lights_spec = env_ptr->get_light_specular_intensities();
-			glUniform1fv(lights_spec_loc, lights_spec.size(), &lights_spec[0]);
+			if (!lights_spec.empty())
+				glUniform1fv(lights_spec_loc, lights_spec.size(), &lights_spec[0]);
 		}
 	}
 }
@@ -215,8 +220,14 @@ material::material(const GLuint program)
 material::material(const std::string& filename_texture, const GLuint program)
 	: texture_(filename_texture), use_texture_(true), color_(0.0f, 0.0f, 0.0f), program_(program), initialized_(true) {}
 
+material::material(const std::string& filename_texture, const std::string& filename_normals, const GLuint program)
+	: texture_(filename_texture), normal_map_(filename_normals), use_texture_(true), color_(0.0f, 0.0f, 0.0f), program_(program), initialized_(true) {}
+
 material::material(const glm::vec3& color, const GLuint program)
 	: use_texture_(false), color_(color), program_(program), initialized_(true) {}
+
+material::material(const glm::vec3& color, const std::string& filename_normals, const GLuint program)
+	: normal_map_(filename_normals), use_texture_(false), color_(color), program_(program), initialized_(true) {}
 
 void material::set_as_active() const
 {
@@ -225,6 +236,7 @@ void material::set_as_active() const
 		glUseProgram(program_);
 
 		texture_.bind_to_unit(0);
+		normal_map_.bind_to_unit(2);
 	}
 }
 
@@ -239,10 +251,31 @@ void material::update()
 	const auto use_texture_loc = glGetUniformLocation(program_, "useTexture");
 	glUniform1i(use_texture_loc, use_texture_);
 	
-	const auto mat_color_loc = glGetUniformLocation(program_, "matColor");
+	const auto mat_color_loc = glGetUniformLocation(program_, "material.color");
 	glUniform3fv(mat_color_loc, 1, &color_[0]);
 
+	const float ka = 0.2f;
+	const float kd = 1.0f;
+	const float ks = 0.2f;
+
+	const float shininess = 15;
+
+	const auto ka_loc = glGetUniformLocation(program_, "material.ambience_c");
+	glUniform1f(ka_loc, ka);
+
+	const auto kd_loc = glGetUniformLocation(program_, "material.diffuse_c");
+	glUniform1f(kd_loc, kd);
+
+	const auto ks_loc = glGetUniformLocation(program_, "material.specular_c");
+	glUniform1f(ks_loc, ks);
+
+	const auto shininess_loc = glGetUniformLocation(program_, "material.shininess");
+	glUniform1f(shininess_loc, shininess);
+
 	// The texture samplers
-	const auto tex_sampler_loc = glGetUniformLocation(program_, "texSampler");
-	glUniform1i(tex_sampler_loc, 0);
+	const auto diffuse_map_loc = glGetUniformLocation(program_, "diffuseMap");
+	glUniform1i(diffuse_map_loc, 0);
+
+	const auto normal_map_loc = glGetUniformLocation(program_, "normalMap");
+	glUniform1i(normal_map_loc, 2);
 }

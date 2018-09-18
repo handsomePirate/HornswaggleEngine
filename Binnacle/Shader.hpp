@@ -22,7 +22,7 @@ struct shader
 
 	shader();
 
-	shader(GLint text_length, const std::string& text);
+	shader(GLint text_length, std::string text);
 };
 
 struct shader_program
@@ -46,7 +46,9 @@ struct material
 	material();
 	explicit material(GLuint program);
 	material(const std::string& filename_texture, GLuint program);
+	material(const std::string& filename_texture, const std::string& filename_normals, GLuint program);
 	material(const glm::vec3& color, GLuint program);
+	material(const glm::vec3& color, const std::string& filename_normals, GLuint program);
 
 	material(const material& rm) = delete;
 	material& operator=(const material& rm) = delete;
@@ -60,6 +62,7 @@ struct material
 	virtual void update();
 protected:
 	texture texture_;
+	texture normal_map_;
 	bool use_texture_;
 	glm::vec3 color_;
 	GLuint program_;

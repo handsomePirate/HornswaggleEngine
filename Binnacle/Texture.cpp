@@ -1,12 +1,13 @@
 #include <SOIL/SOIL.h>
 
 #include "Texture.hpp"
+#include <iostream>
 
 texture::texture()
 {
 	glGenTextures(1, &handle);
 
-	GLubyte data[] = { 255, 255, 255, 255 };
+	GLubyte data[] = { 0, 0, 255, 255 };
 
 	glBindTexture(GL_TEXTURE_2D, handle);
 
@@ -27,6 +28,9 @@ texture::texture(const std::string& filename, const std::string& name)
 {
 	int width, height;
 	unsigned char *image = SOIL_load_image(filename.c_str(), &width, &height, nullptr, SOIL_LOAD_RGB);
+	if (!image)
+		return;
+	//unsigned char *image = SOIL_load_image(filename.c_str(), &width, &height, nullptr, SOIL_LOAD_AUTO);
 
 	this->name = name;
 	glGenTextures(1, &handle);

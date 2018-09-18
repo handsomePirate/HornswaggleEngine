@@ -1,12 +1,25 @@
 #version 330 core
 
+struct Material
+{
+  float ambience_c;
+  float diffuse_c;
+  float specular_c;
+
+  float shininess;
+
+  vec3 color;
+};
+
 in vec4 position;
 flat in vec3 norm;
 in vec3 varNorm;
 in vec3 color;
 in vec2 coords;
+in mat3 TBN;
 
-uniform sampler2D texSampler;
+uniform sampler2D diffuseMap;
+uniform sampler2D normalMap;
 
 uniform vec3 lightPositions[20]; // max number of lights in the scene
 uniform vec3 lightColors[20];
@@ -20,30 +33,44 @@ uniform vec3 camera;
 uniform bool useTexture;
 uniform vec3 matColor;
 
-out vec4 fragColor;
+uniform Material material;
+
+//out vec4 fragColor;
+
+layout(location = 0) out vec4 fragColor;
 
 void main(void)
 {
 	vec3 normal;
-	normal = varNorm;
+	//normal = varNorm;
+
+	float normal_strength = 1;
+
+	normal = texture(normalMap, coords).rgb;
+	normal = normalize(normal * 2.0 - 1.0);
+	normal = mix(vec3(0, 0, 1), normal, normal_strength);
+
+	normal = normalize(TBN * normal);
 
 	vec3 diffuse_color;
 	// Sampling from texture
 
 	if (useTexture)
-		diffuse_color = vec3(texture(texSampler, coords));
+		diffuse_color = vec3(texture(diffuseMap, coords));
 	else
-		diffuse_color = matColor;
+		diffuse_color = material.color;
 
-	const float ambience_c = 0.2;
-	const float diffuse_c = 1.0;
-	const float specular_c = 0.2;
+	fragColor = vec4(diffuse_color.r, 0, 0, 1);
 
-	float c_sum = ambience_c + diffuse_c + specular_c + 0.005;
+	//const float ambience_c = 0.2;
+	//const float diffuse_c = 1.0;
+	//const float specular_c = 0.2;
 
-	float ka = ambience_c / c_sum;
-	float kd = diffuse_c / c_sum;
-	float ks = specular_c / c_sum;
+	float c_sum = material.ambience_c + material.diffuse_c + material.specular_c + 0.005;
+
+	float ka = material.ambience_c / c_sum;
+	float kd = material.diffuse_c / c_sum;
+	float ks = material.specular_c / c_sum;
 
 	vec3 occlusion_factor = vec3(0.95, 0.9, 1.0);
 	vec3 occlusion_color = diffuse_color * occlusion_factor;
@@ -69,7 +96,7 @@ void main(void)
 
 		if (cosb < 0) cosb = 0;
 
-		float coshb = pow(cosb, 15);
+		float coshb = pow(cosb, material.shininess);
 
 		vec3 Es = ks * lightColors[i] * Is * coshb;
 

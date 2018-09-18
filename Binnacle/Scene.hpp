@@ -30,8 +30,10 @@ struct camera
 	glm::mat4 get_local_to_global_matrix() const;
 
 	void set_focus(glm::vec3& f);
+	void set_focus(float x, float y, float z);
 	void set_forward(glm::vec3& f);
 	void set_position(glm::vec3& p);
+	void set_position(float x, float y, float z);
 	void set_up(glm::vec3& u);
 	void set_position_forward(glm::vec3& p, glm::vec3& f);
 	void set_position_focus(glm::vec3& p, glm::vec3& f);
@@ -188,6 +190,9 @@ struct vertex
 	vertex(const glm::vec4 position, const glm::vec3 normal, const glm::vec2 uv_coords)
 		: position_(position), normal_(normal), uv_coords_(uv_coords) {}
 
+	vertex(const glm::vec4 position, const glm::vec3 normal, const glm::vec2 uv_coords, const glm::vec3 tangent)
+		: position_(position), normal_(normal), uv_coords_(uv_coords), tangent_(tangent) {}
+
 	const glm::vec4& get_position() const
 	{
 		return position_;
@@ -203,6 +208,10 @@ struct vertex
 	const glm::vec2& get_uv_coords() const
 	{
 		return uv_coords_;
+	}
+	const glm::vec3& get_tangent() const
+	{
+		return tangent_;
 	}
 
 	void set_position(const glm::vec4 position)
@@ -237,18 +246,29 @@ struct vertex
 	{
 		uv_coords_ = glm::vec2(x, y);
 	}
+	void set_tangent(const float x, const float y, const float z)
+	{
+		tangent_ = glm::vec3(x, y, z);
+	}
+	void set_tangent(const glm::vec3 tangent)
+	{
+		tangent_ = tangent;
+	}
 
 private:
 	glm::vec4 position_;
 	glm::vec3 normal_{};
 	glm::vec3 color_{};
 	glm::vec2 uv_coords_{};
+
+	glm::vec3 tangent_{};
 };
 
 struct model
 {
 	model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, const std::string& filename_model, bool smooth, int mat_id); // TODO: move scene loading to another project
-	
+	model(size_t vertex_count, size_t index_count);
+
 	int get_index() const;
 	int transform_vertices_to(vertex *curr, vertex *pos, int index);
 
@@ -267,6 +287,7 @@ struct model
 	void assign_scale(float x, float y, float z);
 
 	unsigned int get_vertex_count() const;
+	unsigned int get_poly_count() const;
 
 private:
 	void rotate(const glm::vec3&& axis, float angle);
@@ -274,7 +295,7 @@ private:
 
 	static unsigned short emplace_vertex(std::vector<vertex>& vertices, const vertex& v, std::vector<unsigned short>& indices);
 
-	static void process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, const glm::vec3& norm, const glm::vec2& uv, 
+	static void process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, const glm::vec3& norm, const glm::vec2& uv, const glm::vec3& tangent, 
 		unsigned int id, std::vector<unsigned short>& indices, std::map<unsigned int, std::map<unsigned short, std::pair<int, std::vector<unsigned short>>>>& index_hash);
 
 	static int find_match(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, const vertex& v);
@@ -285,6 +306,8 @@ private:
 	static bool compare_vectors(const glm::vec3& v1, const glm::vec3& v2);
 	static bool compare_vectors(const glm::vec4& v1, const glm::vec4& v2);
 	static bool compare_vertices(const vertex& v1, const vertex& v2);
+
+	static glm::vec3 compute_tangent(const glm::vec3& edge1, const glm::vec3& edge2, const glm::vec2& delta_uv1, const glm::vec2& delta_uv2);
 
 	int vertices_index_;
 	int indices_index_;
@@ -307,6 +330,12 @@ struct material_pack
 	std::vector<unsigned short> indices_;
 };
 
+struct poly_vert_count_pack
+{
+	unsigned int vertex_count;
+	unsigned int poly_count;
+};
+
 struct scene
 {
 	scene();
@@ -316,7 +345,8 @@ struct scene
 	scene& operator=(scene && rm) = default;
 	virtual ~scene() = default;
 
-	unsigned int load_model(const std::string& filename_model, bool smooth, int mat_id = -1) const;
+	poly_vert_count_pack load_model(const std::string& filename_model, bool smooth, int mat_id = -1) const;
+	void load_model_data(vertex *vertices, size_t vertex_count, unsigned short *indices, size_t index_count, int mat_id = -1) const;
 	void update() const;
 
 	void use_material(int mat_id) const;
