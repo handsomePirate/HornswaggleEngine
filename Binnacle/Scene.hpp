@@ -6,10 +6,21 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include "Texture.hpp"
+#include "RenderHelper.hpp"
 #include <map>
+#include <functional>
+#include <queue>
+
+#define ASSIGN_FREE_ID(free_vec, next_free)\
+	int id = -1;\
+	if (free_vec.empty())\
+		{id = next_free++;}\
+	else {id = free_vec.front(); free_vec.pop();}
+
 
 struct camera
 {
+	camera();
 	camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, float fov, float aspect, float z_near, float z_far);
 
 	void rotate(const glm::vec3& axis, float angle);
@@ -77,8 +88,8 @@ struct camera
 private:
 	glm::vec4 position_;
 	//glm::vec3 forward_;
-	glm::vec3 focus_;
-	glm::vec3 up_;
+	glm::vec3 focus_{};
+	glm::vec3 up_{};
 	float fov_;
 	float aspect_;
 	float z_near_;
@@ -266,11 +277,57 @@ private:
 
 struct model
 {
-	model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, const std::string& filename_model, bool smooth, int mat_id); // TODO: move scene loading to another project
-	model(size_t vertex_count, size_t index_count);
+	model() = default;
+	model(const std::string& filename_model, bool smooth, int mat_id); // TODO: move scene loading to another project
+	// TODO: optimize loading (only this model needs to be considered, not other models)
 
-	int get_index() const;
-	int transform_vertices_to(vertex *curr, vertex *pos, int index);
+	unsigned int get_vertex_count() const;
+	unsigned int get_index_count() const;
+	unsigned int get_poly_count() const;
+	int get_material_index() const;
+
+	vertex *get_vertex_data();
+	unsigned int *get_index_data();
+private:
+	static unsigned int hash_3(const vertex& v);
+
+	static unsigned int emplace_vertex(std::vector<vertex>& vertices, const vertex& v, std::vector<unsigned int>& indices);
+
+	static void process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, const glm::vec3& norm, const glm::vec2& uv, const glm::vec3& tangent, 
+		unsigned int id, std::vector<unsigned int>& indices, std::map<unsigned int, std::map<unsigned int, std::pair<int, std::vector<unsigned int>>>>& index_hash);
+
+	static int find_match(std::vector<vertex>& vertices, std::vector<unsigned int>& indices, const vertex& v);
+
+	static void interpolate_normals(std::vector<vertex>& vertices, std::vector<unsigned int>& indices, int weight, vertex& v);
+
+	static bool compare_vectors(const glm::vec2& v1, const glm::vec2& v2);
+	static bool compare_vectors(const glm::vec3& v1, const glm::vec3& v2);
+	static bool compare_vectors(const glm::vec4& v1, const glm::vec4& v2);
+	static bool compare_vertices(const vertex& v1, const vertex& v2);
+
+	static glm::vec3 compute_tangent(const glm::vec3& edge1, const glm::vec3& edge2, const glm::vec2& delta_uv1, const glm::vec2& delta_uv2);
+
+	std::vector<vertex> vertices_;
+	std::vector<unsigned int> indices_;
+
+	int material_id_;
+};
+
+struct model_instance
+{
+	model_instance()
+		: model_instance(nullptr, 0) {}
+
+	model_instance(model *m, unsigned int start_index)
+		: prev(nullptr), next(nullptr), m(m), orientation_(0, 0, 0, 1), position_(0), scale_(1), start_index_(start_index) {}
+
+	~model_instance();
+
+	void insert_after(model_instance * mi);
+	model_instance *insert_before(model_instance * mi);
+
+	int transform_vertices_to(vertex *pos, int index, bool change);
+	int transform_indices_to(unsigned int *pos, int index, bool change);
 
 	void rotate(const glm::vec3& axis, float angle);
 	void rotate(float x, float y, float z, float angle);
@@ -286,54 +343,41 @@ struct model
 	void assign_scale(const glm::vec3& scale);
 	void assign_scale(float x, float y, float z);
 
-	unsigned int get_vertex_count() const;
-	unsigned int get_poly_count() const;
+	void register_handle(model_handle *mh);
+
+	unsigned int get_start_index();
+
+	model_instance *prev;
+	model_instance *next;
+
+	model *m;
 
 private:
 	void rotate(const glm::vec3&& axis, float angle);
-	static unsigned short hash_3(const vertex& v);
-
-	static unsigned short emplace_vertex(std::vector<vertex>& vertices, const vertex& v, std::vector<unsigned short>& indices);
-
-	static void process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, const glm::vec3& norm, const glm::vec2& uv, const glm::vec3& tangent, 
-		unsigned int id, std::vector<unsigned short>& indices, std::map<unsigned int, std::map<unsigned short, std::pair<int, std::vector<unsigned short>>>>& index_hash);
-
-	static int find_match(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, const vertex& v);
-
-	static void interpolate_normals(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, int weight, vertex& v);
-
-	static bool compare_vectors(const glm::vec2& v1, const glm::vec2& v2);
-	static bool compare_vectors(const glm::vec3& v1, const glm::vec3& v2);
-	static bool compare_vectors(const glm::vec4& v1, const glm::vec4& v2);
-	static bool compare_vertices(const vertex& v1, const vertex& v2);
-
-	static glm::vec3 compute_tangent(const glm::vec3& edge1, const glm::vec3& edge2, const glm::vec2& delta_uv1, const glm::vec2& delta_uv2);
-
-	int vertices_index_;
-	int indices_index_;
-	std::unique_ptr<texture> tex_ptr_;
-
-	unsigned int vertex_count_;
-	unsigned int index_count_;
 
 	glm::mat4 model_matrix_{};
 	glm::quat orientation_{};
 	glm::vec4 position_{};
 	glm::vec3 scale_{};
+
+	bool transformed_ = true;
+	int last_vertex_transform_index_ = -1;
+	int last_index_transform_index_ = -1;
+
+	std::vector<model_handle *> registered_handles_;
+
+	unsigned int start_index_ = 0; // TODO: change with deletion
 };
 
 struct material_pack
 {
-	std::vector<model> models_;
-	std::vector<vertex> vertices_;
-	std::vector<vertex> transformed_vertices_;
-	std::vector<unsigned short> indices_;
-};
-
-struct poly_vert_count_pack
-{
+	model_instance *model_instances_linked_list_start;
+	model_instance *model_instances_linked_list_end;
 	unsigned int vertex_count;
-	unsigned int poly_count;
+	unsigned int index_count;
+
+	std::vector<vertex> transformed_vertices;
+	std::vector<unsigned int> indices;
 };
 
 struct scene
@@ -345,15 +389,21 @@ struct scene
 	scene& operator=(scene && rm) = default;
 	virtual ~scene() = default;
 
-	poly_vert_count_pack load_model(const std::string& filename_model, bool smooth, int mat_id = -1) const;
-	void load_model_data(vertex *vertices, size_t vertex_count, unsigned short *indices, size_t index_count, int mat_id = -1) const;
+	int instance_model(model *m);
+	model_instance *get_instance(int index) const;
+	void delete_model_instance(int index);
+
 	void update() const;
 
 	void use_material(int mat_id) const;
 	void disable_material(int mat_id) const;
 
 	const std::vector<vertex>& get_vertices(int mat_id) const;
-	const std::vector<unsigned short>& get_indices(int mat_id) const;
+	const std::vector<unsigned int>& get_indices(int mat_id) const;
 private:
 	std::unique_ptr<std::map<int, material_pack>> pck_ptr_;
+
+	std::unique_ptr<std::map<int, model_instance *>> ins_ptr_;
+	std::queue<int> mod_free_ids_;
+	int mod_next_free_id_ = 0;
 };

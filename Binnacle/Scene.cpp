@@ -17,6 +17,9 @@ void split_from(const std::string& str, size_t index, const char c, std::string&
 		after = str.substr(index + 1, str.size() - index - 1);
 }
 
+camera::camera()
+	: position_(), fov_(), aspect_(), z_near_(), z_far_() {}
+
 camera::camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, const float fov, const float aspect, const float z_near, const float z_far)
 	: position_(position, 1), focus_(focus), up_(normalize(up)), fov_(PI * (fov / 180.0f)), aspect_(aspect), z_near_(z_near), z_far_(z_far)
 {
@@ -417,21 +420,19 @@ void environment::unset_changed()
 
 #define DEBUG_LIMIT_INDICES_ 3
 
-model::model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, const std::string& filename_model, const bool smooth, const int mat_id)
+model::model(const std::string& filename_model, const bool smooth, const int mat_id)
+	: material_id_(mat_id)
 {
 	std::ifstream ifs(filename_model);
 
 	std::string line;
 	std::string sign;
 
-	vertices_index_ = vertices.size();
-	indices_index_ = indices.size();
-
 	std::vector<glm::vec3> normals;
 	std::vector<glm::vec4> positions;
 	std::vector<glm::vec2> uv_coords;
 
-	std::map<unsigned int, std::map<unsigned short, std::pair<int, std::vector<unsigned short>>>> index_hash;
+	std::map<unsigned int, std::map<unsigned int, std::pair<int, std::vector<unsigned int>>>> index_hash;
 
 	while (ifs.good())
 	{
@@ -527,15 +528,15 @@ model::model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices
 				{
 					if (smooth)
 					{
-						process_vertex(vertices, positions[first_i - 1], glm::vec3(), glm::vec2(), glm::vec3(), first_i - 1, indices, index_hash);
-						process_vertex(vertices, positions[second_i - 1], glm::vec3(), glm::vec2(), glm::vec3(), second_i - 1, indices, index_hash);
-						process_vertex(vertices, positions[third_i - 1], glm::vec3(), glm::vec2(), glm::vec3(), third_i - 1, indices, index_hash);
+						process_vertex(vertices_, positions[first_i - 1], glm::vec3(), glm::vec2(), glm::vec3(), first_i - 1, indices_, index_hash);
+						process_vertex(vertices_, positions[second_i - 1], glm::vec3(), glm::vec2(), glm::vec3(), second_i - 1, indices_, index_hash);
+						process_vertex(vertices_, positions[third_i - 1], glm::vec3(), glm::vec2(), glm::vec3(), third_i - 1, indices_, index_hash);
 					}
 					else
 					{
-						emplace_vertex(vertices, vertex(positions[first_i - 1]), indices);
-						emplace_vertex(vertices, vertex(positions[second_i - 1]), indices);
-						emplace_vertex(vertices, vertex(positions[third_i - 1]), indices);
+						emplace_vertex(vertices_, vertex(positions[first_i - 1]), indices_);
+						emplace_vertex(vertices_, vertex(positions[second_i - 1]), indices_);
+						emplace_vertex(vertices_, vertex(positions[third_i - 1]), indices_);
 					}
 				}
 				else
@@ -544,15 +545,15 @@ model::model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices
 					{
 						if (smooth)
 						{
-							process_vertex(vertices, positions[first_i - 1], normals[first_n - 1], glm::vec2(), glm::vec3(), first_i - 1, indices, index_hash);
-							process_vertex(vertices, positions[second_i - 1], normals[second_n - 1], glm::vec2(), glm::vec3(), second_i - 1, indices, index_hash);
-							process_vertex(vertices, positions[third_i - 1], normals[third_n - 1], glm::vec2(), glm::vec3(), third_i - 1, indices, index_hash);
+							process_vertex(vertices_, positions[first_i - 1], normals[first_n - 1], glm::vec2(), glm::vec3(), first_i - 1, indices_, index_hash);
+							process_vertex(vertices_, positions[second_i - 1], normals[second_n - 1], glm::vec2(), glm::vec3(), second_i - 1, indices_, index_hash);
+							process_vertex(vertices_, positions[third_i - 1], normals[third_n - 1], glm::vec2(), glm::vec3(), third_i - 1, indices_, index_hash);
 						}
 						else
 						{
-							emplace_vertex(vertices, vertex(positions[first_i - 1], normals[first_n - 1]), indices);
-							emplace_vertex(vertices, vertex(positions[second_i - 1], normals[second_n - 1]), indices);
-							emplace_vertex(vertices, vertex(positions[third_i - 1], normals[third_n - 1]), indices);
+							emplace_vertex(vertices_, vertex(positions[first_i - 1], normals[first_n - 1]), indices_);
+							emplace_vertex(vertices_, vertex(positions[second_i - 1], normals[second_n - 1]), indices_);
+							emplace_vertex(vertices_, vertex(positions[third_i - 1], normals[third_n - 1]), indices_);
 						}
 					}
 					else
@@ -561,15 +562,15 @@ model::model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices
 															 uv_coords[second_u - 1] - uv_coords[first_u - 1], uv_coords[third_u - 1] - uv_coords[first_u - 1]); // TODO: might need to interpolate later
 						if (smooth)
 						{
-							process_vertex(vertices, positions[first_i - 1], normals[first_n - 1], uv_coords[first_u - 1], tangent, first_i - 1, indices, index_hash);
-							process_vertex(vertices, positions[second_i - 1], normals[second_n - 1], uv_coords[second_u - 1], tangent, second_i - 1, indices, index_hash);
-							process_vertex(vertices, positions[third_i - 1], normals[third_n - 1], uv_coords[third_u - 1], tangent, third_i - 1, indices, index_hash);
+							process_vertex(vertices_, positions[first_i - 1], normals[first_n - 1], uv_coords[first_u - 1], tangent, first_i - 1, indices_, index_hash);
+							process_vertex(vertices_, positions[second_i - 1], normals[second_n - 1], uv_coords[second_u - 1], tangent, second_i - 1, indices_, index_hash);
+							process_vertex(vertices_, positions[third_i - 1], normals[third_n - 1], uv_coords[third_u - 1], tangent, third_i - 1, indices_, index_hash);
 						}
 						else
 						{
-							emplace_vertex(vertices, vertex(positions[first_i - 1], normals[first_n - 1], uv_coords[first_u - 1], tangent), indices);
-							emplace_vertex(vertices, vertex(positions[second_i - 1], normals[second_n - 1], uv_coords[second_u - 1], tangent), indices);
-							emplace_vertex(vertices, vertex(positions[third_i - 1], normals[third_n - 1], uv_coords[third_u - 1], tangent), indices);
+							emplace_vertex(vertices_, vertex(positions[first_i - 1], normals[first_n - 1], uv_coords[first_u - 1], tangent), indices_);
+							emplace_vertex(vertices_, vertex(positions[second_i - 1], normals[second_n - 1], uv_coords[second_u - 1], tangent), indices_);
+							emplace_vertex(vertices_, vertex(positions[third_i - 1], normals[third_n - 1], uv_coords[third_u - 1], tangent), indices_);
 						}
 					}
 				}
@@ -595,133 +596,237 @@ model::model(std::vector<vertex>& vertices, std::vector<unsigned short>& indices
 	//indices_[1] = 1;
 	//indices_[2] = 2;
 
-	vertex_count_ = vertices.size() - vertices_index_;
-	index_count_ = indices.size() - indices_index_;
-
 #ifdef DEBUG_LIMIT_INDICES
 	vertex_count_ = DEBUG_LIMIT_INDICES;
 	index_count_ = DEBUG_LIMIT_INDICES;
 #endif
-	model_matrix_ = glm::mat4(1.0f);
-	orientation_ = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-	position_ = glm::vec4(0.0f);
-	scale_ = glm::vec3(1.0f);
 }
 
-model::model(const size_t vertex_count, const size_t index_count)
-	: vertices_index_(0), indices_index_(0)
+model_instance::~model_instance()
 {
-	vertex_count_ = vertex_count;
-	index_count_ = index_count;
+	if (prev)
+		prev->next = next;
+	if (next)
+		next->prev = prev;
 
-	model_matrix_ = glm::mat4(1.0f);
-	orientation_ = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-	position_ = glm::vec4(0.0f);
-	scale_ = glm::vec3(1.0f);
-}
-
-int model::get_index() const
-{
-	return vertices_index_;
-}
-
-int model::transform_vertices_to(vertex *curr, vertex *pos, const int index)
-{
-	model_matrix_ = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(position_)), scale_);
-
-	for (unsigned int i = 0; i < vertex_count_; ++i)
+	for (auto && handle : registered_handles_)
 	{
-		*pos = *curr;
+		handle->delete_instance_reference();
+	}
+}
 
-		pos->set_position(orientation_ * (model_matrix_ * curr->get_position()));
-		pos->set_normal(orientation_ * curr->get_normal());
-		pos->set_tangent(orientation_ * curr->get_tangent());
+void model_instance::insert_after(model_instance *mi)
+{
+	next = mi->next;
+	mi->next = this;
+	prev = mi;
+}
 
-		++pos;
-		++curr;
+model_instance *model_instance::insert_before(model_instance *mi)
+{
+	prev = mi->prev;
+	mi->prev = this;
+	next = mi;
+
+	return prev;
+}
+
+int model_instance::transform_vertices_to(vertex *pos, const int index, const bool change)
+{
+	if (transformed_ || change || index != last_vertex_transform_index_)
+	{
+		model_matrix_ = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(position_)), scale_);
+		auto curr = m->get_vertex_data();
+
+		for (unsigned int i = 0; i < m->get_vertex_count(); ++i)
+		{
+			*pos = *curr;
+
+			pos->set_position(orientation_ * (model_matrix_ * curr->get_position()));
+			pos->set_normal(orientation_ * curr->get_normal());
+			pos->set_tangent(orientation_ * curr->get_tangent());
+
+			++pos;
+			++curr;
+		}
+	}
+	
+	transformed_ = false;
+	last_vertex_transform_index_ = index;
+	return index + m->get_vertex_count();
+}
+
+int model_instance::transform_indices_to(unsigned int* pos, const int index, const bool change)
+{
+	if (change || index != last_index_transform_index_)
+	{
+		auto curr = m->get_index_data();
+
+		for (unsigned int i = 0; i < m->get_index_count(); ++i)
+		{
+			*pos = *curr + start_index_;
+
+			++pos;
+			++curr;
+		}
 	}
 
-	return index + vertex_count_;
+	last_index_transform_index_ = index;
+	return index + m->get_index_count();
 }
 
-void model::rotate(const glm::vec3& axis, const float angle)
+void model_instance::rotate(const glm::vec3& axis, const float angle)
 {
+	if (angle == 0)
+		return;
+
+	transformed_ = true;
 	orientation_ = glm::rotate(orientation_, angle, axis);
 }
 
-void model::rotate(const float x, const float y, const float z, const float angle)
+void model_instance::rotate(const float x, const float y, const float z, const float angle)
 {
 	rotate(glm::vec3(x, y, z), angle);
 }
 
-void model::translate(const glm::vec4& offset)
+void model_instance::translate(const glm::vec4& offset)
 {
+	if (offset.x == 0 && offset.y == 0 && offset.z == 0)
+		return;
+
+	transformed_ = true;
 	position_ += offset;
 }
 
-void model::translate(const float dx, const float dy, const float dz)
+void model_instance::translate(const float dx, const float dy, const float dz)
 {
+	if (dx == 0 && dy == 0 && dz == 0)
+		return;
+
+	transformed_ = true;
 	position_.x += dx;
 	position_.y += dy;
 	position_.z += dz;
 }
 
-void model::scale(const glm::vec3& ratio)
+void model_instance::scale(const glm::vec3& ratio)
 {
+	if (ratio.x == 1 && ratio.y == 1 && ratio.z == 1)
+		return;
+
+	transformed_ = true;
 	scale_ = glm::vec3(ratio.x * scale_.x, ratio.y * scale_.y, ratio.z * scale_.z);
 }
 
-void model::scale(const float ratio)
+void model_instance::scale(const float ratio)
 {
+	if (ratio == 1)
+		return;
+
+	transformed_ = true;
 	scale_ *= ratio;
 }
 
-void model::assign_position(const glm::vec4& position)
+void model_instance::assign_position(const glm::vec4& position)
 {
+	if (position.x == position_.x && position.y == position_.y && position.z == position_.z)
+		return;
+
+	transformed_ = true;
 	position_ = position;
 }
 
-void model::assign_position(const float x, const float y, const float z)
+void model_instance::assign_position(const float x, const float y, const float z)
 {
+	if (x == position_.x && y == position_.y && z == position_.z)
+		return;
+
+	transformed_ = true;
 	position_ = glm::vec4(x, y, z, 1);
 }
 
-void model::assign_orientation(const glm::quat& orientation)
+void model_instance::assign_orientation(const glm::quat& orientation)
 {
+	if (orientation.x == orientation_.x && orientation.y == orientation_.y && orientation.z == orientation_.z && orientation.w == orientation_.w)
+		return;
+
+	transformed_ = true;
 	orientation_ = orientation;
 }
 
-void model::assign_orientation(const float x, const float y, const float z, const float w)
+void model_instance::assign_orientation(const float x, const float y, const float z, const float w)
 {
+	if (x == orientation_.x && y == orientation_.y && z == orientation_.z && w == orientation_.w)
+		return;
+
+	transformed_ = true;
 	orientation_ = glm::quat(w, x, y, z);
 }
 
-void model::assign_scale(const glm::vec3& scale)
+void model_instance::assign_scale(const glm::vec3& scale)
 {
+	if (scale.x == scale_.x && scale.y == scale_.y && scale.z == scale_.z)
+		return;
+
+	transformed_ = true;
 	scale_ = scale;
 }
 
-void model::assign_scale(const float x, const float y, const float z)
+void model_instance::assign_scale(const float x, const float y, const float z)
 {
+	if (x == scale_.x && y == scale_.y && z == scale_.z)
+		return;
+	
+	transformed_ = true;
 	scale_ = glm::vec3(x, y, z);
+}
+
+void model_instance::register_handle(model_handle* mh)
+{
+	registered_handles_.push_back(mh);
+}
+
+unsigned model_instance::get_start_index()
+{
+	return start_index_;
 }
 
 unsigned model::get_vertex_count() const
 {
-	return vertex_count_;
+	return vertices_.size();
+}
+
+unsigned model::get_index_count() const
+{
+	return indices_.size();
 }
 
 unsigned model::get_poly_count() const
 {
-	return index_count_ / 3;
+	return indices_.size() / 3;
 }
 
-void model::rotate(const glm::vec3&& axis, const float angle)
+int model::get_material_index() const
+{
+	return material_id_;
+}
+
+vertex* model::get_vertex_data()
+{
+	return &vertices_[0];
+}
+
+unsigned int* model::get_index_data()
+{
+	return &indices_[0];
+}
+
+void model_instance::rotate(const glm::vec3&& axis, const float angle)
 {
 	rotate(axis, angle);
 }
 
-unsigned short model::hash_3(const vertex& v)
+unsigned int model::hash_3(const vertex& v)
 {
 	const auto pos = v.get_position();
 
@@ -729,10 +834,10 @@ unsigned short model::hash_3(const vertex& v)
 	const auto p2 = 7;
 	const auto p3 = 13;
 
-	return static_cast<unsigned short>(floor(pos.x * p1 + pos.y * p2 + pos.z * p3)) % 100; // TODO
+	return static_cast<unsigned int>(floor(pos.x * p1 + pos.y * p2 + pos.z * p3)) % 100; // TODO
 }
 
-unsigned short model::emplace_vertex(std::vector<vertex>& vertices, const vertex& v, std::vector<unsigned short>& indices)
+unsigned int model::emplace_vertex(std::vector<vertex>& vertices, const vertex& v, std::vector<unsigned int>& indices)
 {
 	vertices.push_back(v);
 	indices.push_back(vertices.size() - 1);
@@ -741,7 +846,7 @@ unsigned short model::emplace_vertex(std::vector<vertex>& vertices, const vertex
 }
 
 void model::process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, const glm::vec3& norm, const glm::vec2& uv, const glm::vec3& tangent, const unsigned int id, 
-	std::vector<unsigned short>& indices, std::map<unsigned int, std::map<unsigned short, std::pair<int, std::vector<unsigned short>>>>& index_hash)
+	std::vector<unsigned int>& indices, std::map<unsigned int, std::map<unsigned int, std::pair<int, std::vector<unsigned int>>>>& index_hash)
 {
 	auto v = vertex(pos, norm, uv, tangent);
 
@@ -751,8 +856,8 @@ void model::process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, 
 	{
 		const auto index = emplace_vertex(vertices, v, indices);
 
-		index_hash[hash] = std::map<unsigned short, std::pair<int, std::vector<unsigned short>>>();
-		//index_hash[hash][id] = std::pair<int, std::vector<unsigned short>>();
+		index_hash[hash] = std::map<unsigned int, std::pair<int, std::vector<unsigned int>>>();
+		//index_hash[hash][id] = std::pair<int, std::vector<unsigned int>>();
 		index_hash[hash][id].first = 1;
 		index_hash[hash][id].second.push_back(index);
 	}
@@ -763,8 +868,8 @@ void model::process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, 
 		{
 			const auto index = emplace_vertex(vertices, v, indices);
 
-			//index_hash[hash][id] = std::pair<int, std::vector<unsigned short>>();
-			//index_hash[hash][id].second = std::vector<unsigned short>();
+			//index_hash[hash][id] = std::pair<int, std::vector<unsigned int>>();
+			//index_hash[hash][id].second = std::vector<unsigned int>();
 			index_hash[hash][id].first = 1;
 			index_hash[hash][id].second.push_back(index);
 		}
@@ -789,7 +894,7 @@ void model::process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, 
 	}
 }
 
-int model::find_match(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, const vertex& v)
+int model::find_match(std::vector<vertex>& vertices, std::vector<unsigned int>& indices, const vertex& v)
 {
 	for (size_t i = 0; i < indices.size(); ++i)
 	{
@@ -800,7 +905,7 @@ int model::find_match(std::vector<vertex>& vertices, std::vector<unsigned short>
 	return -1;
 }
 
-void model::interpolate_normals(std::vector<vertex>& vertices, std::vector<unsigned short>& indices, const int weight,
+void model::interpolate_normals(std::vector<vertex>& vertices, std::vector<unsigned int>& indices, const int weight,
 	vertex& v)
 {
 	if (indices.empty())
@@ -870,49 +975,72 @@ glm::vec3 model::compute_tangent(const glm::vec3& edge1, const glm::vec3& edge2,
 scene::scene()
 {
 	pck_ptr_ = std::make_unique<std::map<int, material_pack>>();
+	ins_ptr_ = std::make_unique<std::map<int, model_instance *>>();
 	use_material(-1);
 }
 
-poly_vert_count_pack scene::load_model(const std::string& filename_model, bool smooth, int mat_id) const
+int scene::instance_model(model* m)
 {
-	if (pck_ptr_->find(mat_id) != pck_ptr_->end())
-	{
-		(*pck_ptr_)[mat_id].models_.emplace_back((*pck_ptr_)[mat_id].vertices_, (*pck_ptr_)[mat_id].indices_, filename_model, smooth, mat_id);
-		const auto vc = (*pck_ptr_)[mat_id].models_[(*pck_ptr_)[mat_id].models_.size() - 1].get_vertex_count();
-		const auto pc = (*pck_ptr_)[mat_id].models_[(*pck_ptr_)[mat_id].models_.size() - 1].get_poly_count();
+	ASSIGN_FREE_ID(mod_free_ids_, mod_next_free_id_);
 
-		if (vc == 0)
-			pck_ptr_->erase(pck_ptr_->find(mat_id));
+	const auto mi = new model_instance(m, (*pck_ptr_)[m->get_material_index()].vertex_count);
+	(*pck_ptr_)[m->get_material_index()].vertex_count += m->get_vertex_count();
+	(*pck_ptr_)[m->get_material_index()].index_count += m->get_index_count();
 
-		return poly_vert_count_pack {vc, pc};
-	}
-	return poly_vert_count_pack{ 0, 0 };;
-	// TODO: do this in the material pack structure
+	if ((*pck_ptr_)[m->get_material_index()].model_instances_linked_list_start)
+		mi->insert_before((*pck_ptr_)[m->get_material_index()].model_instances_linked_list_start);
+	else
+		(*pck_ptr_)[m->get_material_index()].model_instances_linked_list_end = mi;
+
+	(*pck_ptr_)[m->get_material_index()].model_instances_linked_list_start = mi;
+
+	(*ins_ptr_)[id] = mi;
+
+	return id;
 }
 
-void scene::load_model_data(vertex* vertices, size_t vertex_count, unsigned short* indices, size_t index_count, const int mat_id) const
+model_instance *scene::get_instance(const int index) const
 {
-	(*pck_ptr_)[mat_id].models_.emplace_back(vertex_count, index_count);
-	(*pck_ptr_)[mat_id].vertices_ = std::vector<vertex>(vertices, vertices + vertex_count);
-	(*pck_ptr_)[mat_id].indices_ = std::vector<unsigned short>(indices, indices + index_count);
+	if (ins_ptr_->find(index) != ins_ptr_->end())
+		return (*ins_ptr_)[index];
+	return nullptr;
+}
+
+void scene::delete_model_instance(const int index)
+{
+	const auto it = ins_ptr_->find(index);
+	if (it == ins_ptr_->end())
+		return;
+
+	const auto& m = it->second->m;
+	(*pck_ptr_)[m->get_material_index()].vertex_count -= m->get_vertex_count();
+	(*pck_ptr_)[m->get_material_index()].index_count -= m->get_index_count();
+
+	if (!it->second->prev)
+		(*pck_ptr_)[m->get_material_index()].model_instances_linked_list_start = it->second->next;
+	
+	mod_free_ids_.push(index);
+
+	delete (*ins_ptr_)[index];
+	ins_ptr_->erase(it);
 }
 
 void scene::update() const
 {
-	//if (pck_ptr_->size() > 1)
-	//{
-	//	if (!(*pck_ptr_)[0].models_.empty())
-	//	{
-	//		(*pck_ptr_)[0].models_[0].rotate(1, 0, 0, 0.01f);
-	//		(*pck_ptr_)[0].models_[0].assign_position(-0.6, 0, 0);
-	//		(*pck_ptr_)[0].models_[0].assign_scale(0.4, 0.4, 0.4);
-	//		if (pck_ptr_->size() > 2 && !(*pck_ptr_)[1].models_.empty())
-	//		{
-	//			(*pck_ptr_)[1].models_[0].assign_position(0.6, 0, 0);
-	//			(*pck_ptr_)[1].models_[0].assign_scale(0.4, 0.4, 0.4);
-	//		}
-	//	}
-	//}
+	if (pck_ptr_->size() > 1)
+	{
+		//if (!(*pck_ptr_)[0].models_.empty())
+		//{
+		//	(*pck_ptr_)[0].models_[0].rotate(1, 0, 0, 0.01f);
+		//	(*pck_ptr_)[0].models_[0].assign_position(-0.6, 0, 0);
+		//	(*pck_ptr_)[0].models_[0].assign_scale(0.4, 0.4, 0.4);
+		//	if (pck_ptr_->size() > 2 && !(*pck_ptr_)[1].models_.empty())
+		//	{
+		//		(*pck_ptr_)[1].models_[0].assign_position(0.6, 0, 0);
+		//		(*pck_ptr_)[1].models_[0].assign_scale(0.4, 0.4, 0.4);
+		//	}
+		//}
+	}
 }
 
 void scene::use_material(const int mat_id) const
@@ -927,20 +1055,44 @@ void scene::disable_material(const int mat_id) const
 
 const std::vector<vertex>& scene::get_vertices(const int mat_id) const
 {
-	(*pck_ptr_)[mat_id].transformed_vertices_.resize((*pck_ptr_)[mat_id].vertices_.size());
+	auto change = false;
+	if ((*pck_ptr_)[mat_id].transformed_vertices.size() != (*pck_ptr_)[mat_id].vertex_count)
+	{
+		(*pck_ptr_)[mat_id].transformed_vertices.resize((*pck_ptr_)[mat_id].vertex_count);
+		change = true;
+	}
 #ifdef DEBUG_LIMIT_INDICES
 	transformed_vertices_.resize(DEBUG_LIMIT_INDICES);
 #endif
 	int index = 0;
-	for (auto && model : (*pck_ptr_)[mat_id].models_)
+	auto mi = (*pck_ptr_)[mat_id].model_instances_linked_list_end;
+
+	while (mi != nullptr)
 	{
-		index = model.transform_vertices_to(&(*pck_ptr_)[mat_id].vertices_[model.get_index()], &(*pck_ptr_)[mat_id].transformed_vertices_[index], index);
+		index = mi->transform_vertices_to(&(*pck_ptr_)[mat_id].transformed_vertices[index], index, change);
+		mi = mi->prev;
 	}
 
-	return (*pck_ptr_)[mat_id].transformed_vertices_;
+	return (*pck_ptr_)[mat_id].transformed_vertices;
 }
 
-const std::vector<unsigned short>& scene::get_indices(const int mat_id) const
+const std::vector<unsigned int>& scene::get_indices(const int mat_id) const
 {
-	return (*pck_ptr_)[mat_id].indices_;
+	auto change = false;
+	if ((*pck_ptr_)[mat_id].indices.size() != (*pck_ptr_)[mat_id].index_count)
+	{
+		(*pck_ptr_)[mat_id].indices.resize((*pck_ptr_)[mat_id].index_count);
+		change = true;
+	}
+
+	int index = 0;
+	auto mi = (*pck_ptr_)[mat_id].model_instances_linked_list_end;
+
+	while (mi != nullptr)
+	{
+		index = mi->transform_indices_to(&(*pck_ptr_)[mat_id].indices[index], index, change);
+		mi = mi->prev;
+	}
+
+	return (*pck_ptr_)[mat_id].indices;
 }

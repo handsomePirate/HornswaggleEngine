@@ -4,6 +4,7 @@
 #include <SOIL/SOIL.h>
 
 #include "RenderManager.hpp"
+#include "RenderHelper.hpp"
 
 render_manager::render_manager()
 	: window_(nullptr), valid_(false), should_end_(false), width_(0), height_(0), window_visible_(false) {}
@@ -141,26 +142,16 @@ int render_manager::create_shader_program(const std::string& vertex_shader_file,
 	return shp.get_id();
 }
 
-void render_manager::select_renderer(const rm_choice rmc)
+void render_manager::init_renderer()
 {
 	if (valid_)
 	{
-		if (rmc == BINNACLE)
-		{
-			rnd_ptr_ = std::make_unique<renderer>();
-		}
-		else
-		{
-			// TODO: exchange for a logger
-			std::cout << "Error: not an existing renderer!" << std::endl;
-		}
+		rnd_ptr_ = std::make_unique<renderer>();
+		mod_ptr_ = std::make_unique<std::map<int, model>>();
+		ins_ptr_ = std::make_unique<std::map<int, std::vector<int>>>();
+		init_scene();
+		init_environment();
 	}
-}
-
-void render_manager::select_scene(const std::shared_ptr<scene>& scn_ptr)
-{
-	if (valid_)
-		scn_ptr_ = scn_ptr;
 }
 
 void render_manager::init_texture_rendering(const int width, const int height)
@@ -226,12 +217,15 @@ unsigned char *render_manager::render_to_texture(const bool screen) const
 	return reinterpret_cast<unsigned char *>(image_data);
 }
 
-void render_manager::change_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, const float fov, const float aspect, const float z_near, const float z_far) const
+void render_manager::set_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, const float fov, const float aspect, const float z_near, const float z_far) const
 {
-	auto& cam = env_ptr_->get_camera();
+	if (env_ptr_)
+	{
+		auto cam = &env_ptr_->get_camera();
 
-	cam.set_transform_focus(position, focus, up);
-	cam.set_frustum(fov, aspect, z_near, z_far);
+		cam->set_transform_focus(position, focus, up);
+		cam->set_frustum(fov, aspect, z_near, z_far);
+	}
 }
 
 camera& render_manager::get_camera() const
@@ -239,46 +233,88 @@ camera& render_manager::get_camera() const
 	return env_ptr_->get_camera();
 }
 
-void render_manager::load_model(const std::string& filename_model, const bool smooth, const int mat_id)
+int render_manager::load_model(const std::string& filename_model, const bool smooth, const int mat_id)
 {
-	const auto pack = scn_ptr_->load_model(filename_model, smooth, mat_id);
-	vertex_count_ += pack.vertex_count;
-	poly_count_ += pack.poly_count;
+	ASSIGN_FREE_ID(mod_free_ids_, mod_next_free_id_);
+	(*mod_ptr_)[id] = model(filename_model, smooth, mat_id);
+
+	return id;
 }
 
-void render_manager::load_model_data(vertex *vertices, const size_t vertex_count, unsigned short *indices, const size_t index_count, const int mat_id)
+int render_manager::load_model_data(vertex *vertices, const size_t vertex_count, unsigned int *indices, const size_t index_count, const int mat_id)
 {
-	scn_ptr_->load_model_data(vertices, vertex_count, indices, index_count, mat_id);
-	vertex_count_ += vertex_count;
-	poly_count_ += index_count / 3;
+	//scn_ptr_->load_model_data(vertices, vertex_count, indices, index_count, mat_id);
+	//vertex_count_ += vertex_count;
+	//poly_count_ += index_count / 3;
+	return 0;
 }
 
-void render_manager::load_model_data(float* vertex_positions, const size_t vertex_count, unsigned short* indices,
+int render_manager::load_model_data(float* vertex_positions, const size_t vertex_count, unsigned int* indices,
                                      const size_t index_count, const int mat_id)
 {
-	const auto vertices = new vertex[vertex_count];
-
-	auto vert_pos = reinterpret_cast<glm::vec3 *>(vertex_positions);
-	for (size_t i = 0; i < vertex_count; ++i)
-	{
-		vertices[i] = vertex(glm::vec4(vert_pos->x, vert_pos->y, vert_pos->z, 1), glm::vec3(0, 1, 0), glm::vec3(1, 0, 0), glm::vec2(0, 0));
-		++vert_pos;
-	}
-
-	load_model_data(vertices, vertex_count, indices, index_count, mat_id);
-	delete[] vertices;
+	//const auto vertices = new vertex[vertex_count];
+	//
+	//auto vert_pos = reinterpret_cast<glm::vec3 *>(vertex_positions);
+	//for (size_t i = 0; i < vertex_count; ++i)
+	//{
+	//	vertices[i] = vertex(glm::vec4(vert_pos->x, vert_pos->y, vert_pos->z, 1), glm::vec3(0, 1, 0), glm::vec3(1, 0, 0), glm::vec2(0, 0));
+	//	++vert_pos;
+	//}
+	//
+	//load_model_data(vertices, vertex_count, indices, index_count, mat_id);
+	//delete[] vertices;
+	return 0;
 }
 
-#define ASSIGN_FREE_ID(free_vec, next_free)\
-	int id = -1;\
-	if (free_ids_.empty())\
-		{id = next_free_id_++;}\
-	else {id = free_ids_.front(); free_ids_.pop();}
+void render_manager::delete_model(const int index)
+{
+	if (mod_ptr_->find(index) != mod_ptr_->end())
+	{
+		mod_free_ids_.push(index);
+
+		for (auto && instance : (*ins_ptr_)[index])
+		{
+			delete_model_instance(instance);
+		}
+
+		mod_ptr_->erase(index);
+		ins_ptr_->erase(index);
+	}
+}
+
+int render_manager::instance_model(const int index)
+{
+	if (mod_ptr_ && scn_ptr_ && mod_ptr_->find(index) != mod_ptr_->end())
+	{
+		const auto instance_id = scn_ptr_->instance_model(&(*mod_ptr_)[index]);
+		(*ins_ptr_)[index].push_back(instance_id);
+
+		vertex_count_ += (*mod_ptr_)[index].get_vertex_count();
+		poly_count_ += (*mod_ptr_)[index].get_poly_count();
+
+		return instance_id;
+	}
+	return -1;
+}
+
+void render_manager::delete_model_instance(const int index) const
+{
+	scn_ptr_->delete_model_instance(index);
+}
+
+model_handle render_manager::get_instance_handle(const int index) const
+{
+	if (scn_ptr_)
+	{
+		return model_handle(scn_ptr_->get_instance(index));
+	}
+	return model_handle(nullptr);
+}
 
 int render_manager::create_material(const GLuint program, const std::string& filename_texture, const std::string& filename_normals)
 {
 	//empty_normals
-	ASSIGN_FREE_ID(free_ids_, next_free_id_);
+	ASSIGN_FREE_ID(mat_free_ids_, mat_next_free_id_);
 	(*mat_ptr_)[id] = material(filename_texture, filename_normals, program);
 	
 	scn_ptr_->use_material(id);
@@ -288,7 +324,7 @@ int render_manager::create_material(const GLuint program, const std::string& fil
 
 int render_manager::create_material(const GLuint program, const glm::vec3& color, const std::string& filename_normals)
 {
-	ASSIGN_FREE_ID(free_ids_, next_free_id_);
+	ASSIGN_FREE_ID(mat_free_ids_, mat_next_free_id_);
 	(*mat_ptr_)[id] = material(color, filename_normals, program);
 
 	scn_ptr_->use_material(id);
@@ -305,7 +341,7 @@ void render_manager::delete_material(const int index)
 {
 	if (mat_ptr_->find(index) != mat_ptr_->end())
 	{
-		free_ids_.push(index);
+		mat_free_ids_.push(index);
 		mat_ptr_->erase(index);
 	}
 }
@@ -368,8 +404,9 @@ float render_manager::get_fps()
 	return result;
 }
 
-void render_manager::update()
+float render_manager::update()
 {
+	float time_elapsed = 0;
 	if (first_update_)
 	{
 		frame_start_ = time_now;
@@ -386,10 +423,10 @@ void render_manager::update()
 
 		get_camera().set_aspect(width_ / static_cast<float>(height_));
 
-		const auto time_elapsed = get_seconds(last_update_);
+		time_elapsed = get_seconds(last_update_);
 		last_update_ = time_now;
 		++frame_count_;
-		const float speed = 5.0f * time_elapsed;
+		const auto speed = 5.0f * time_elapsed;
 
 		if (window_visible_)
 		{
@@ -426,6 +463,8 @@ void render_manager::update()
 		for (auto && shd : *shd_ptr_)
 			shd.second.update(env_ptr_);
 	}
+
+	return time_elapsed;
 }
 
 
@@ -442,6 +481,12 @@ void render_manager::render() const
 bool render_manager::should_end() const
 {
 	return should_end_;
+}
+
+void render_manager::init_scene()
+{
+	if (valid_)
+		scn_ptr_ = std::make_shared<scene>();
 }
 
 void render_manager::key_callback(GLFWwindow* window, const int key, const int scancode, const int action, const int mods)

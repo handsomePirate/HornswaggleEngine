@@ -7,7 +7,6 @@
 
 #include "Renderer.hpp"
 #include "Scene.hpp"
-#include "Binnacle_Render_Manager.hpp"
 #include "Shader.hpp"
 
 #include <GLFW/glfw3.h>
@@ -38,10 +37,8 @@ struct render_manager
 	float get_aspect_ratio() const;
 
 	int create_shader_program(const std::string& vertex_shader_file, const std::string& fragment_shader_file, const std::string& geometry_shader_file = "") const;
-	void select_renderer(rm_choice rmc);
-	void select_scene(const std::shared_ptr<scene>& scn_ptr);
-	template<class ...T>
-	void set_environment(camera&& cam, T&&... args);
+	void init_renderer();
+
 	template<class ...T>
 	void add_lights(T&&... args);
 	template<class ...T>
@@ -50,12 +47,18 @@ struct render_manager
 	void init_texture_rendering(int width, int height);
 	unsigned char *render_to_texture(bool screen = false) const;
 
-	void change_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, float fov, float aspect, float z_near, float z_far) const;
+	void set_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, float fov, float aspect, float z_near, float z_far) const;
 	camera& get_camera() const;
 
-	void load_model(const std::string& filename_model, bool smooth, int mat_id = -1);
-	void load_model_data(vertex *vertices, size_t vertex_count, unsigned short *indices, size_t index_count, int mat_id = -1);
-	void load_model_data(float *vertex_positions, size_t vertex_count, unsigned short* indices, size_t index_count, int mat_id = -1);
+	int load_model(const std::string& filename_model, bool smooth, int mat_id = -1);
+	int load_model_data(vertex *vertices, size_t vertex_count, unsigned int *indices, size_t index_count, int mat_id = -1);
+	int load_model_data(float *vertex_positions, size_t vertex_count, unsigned int* indices, size_t index_count, int mat_id = -1);
+	void delete_model(int index);
+
+	int instance_model(int index);
+	void delete_model_instance(int index) const;
+
+	model_handle get_instance_handle(int index) const;
 
 	int create_material(GLuint program, const std::string& filename_texture = "", const std::string& filename_normals = "");
 	int create_material(GLuint program, const glm::vec3& color, const std::string& filename_normals = "");
@@ -66,13 +69,20 @@ struct render_manager
 								   const std::string& neg_x, const std::string& pos_x, 
 								   const std::string& neg_y, const std::string& pos_y) const;
 
-	float get_fps();
-
-	void update();
+	float update();
 	void render() const;
 
 	bool should_end() const;
 private:
+	void init_scene();
+
+	template<class ...T>
+	void init_environment(camera&& cam, T&&... args);
+	template<class ...T>
+	void init_environment(T&&... args);
+
+	float get_fps();
+
 	virtual void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 	virtual void mouse_move_callback(GLFWwindow *window, double x_pos, double y_pos);
 	virtual void window_resize_callback(GLFWwindow *window, int width, int height);
@@ -93,9 +103,15 @@ private:
 	float width_;
 	float height_;
 
+	std::unique_ptr<std::map<int, std::vector<int>>> ins_ptr_;
+
+	std::unique_ptr<std::map<int, model>> mod_ptr_;
+	std::queue<int> mod_free_ids_;
+	int mod_next_free_id_ = 0;
+
 	std::shared_ptr<std::map<int, material>> mat_ptr_;
-	std::queue<int> free_ids_;
-	int next_free_id_ = 0;
+	std::queue<int> mat_free_ids_;
+	int mat_next_free_id_ = 0;
 
 	std::shared_ptr<std::map<GLuint, shader_program>> shd_ptr_;
 
@@ -133,9 +149,16 @@ private:
 };
 
 template <class ... T>
-void render_manager::set_environment(camera&& cam, T&&... args)
+void render_manager::init_environment(camera&& cam, T&&... args)
 {
 	env_ptr_ = std::make_shared<environment>(cam);
+	env_ptr_->set_lights(std::forward<T>(args)...);
+}
+
+template <class ... T>
+void render_manager::init_environment(T&&... args)
+{
+	env_ptr_ = std::make_shared<environment>(camera());
 	env_ptr_->set_lights(std::forward<T>(args)...);
 }
 

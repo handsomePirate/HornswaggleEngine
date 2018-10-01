@@ -1,11 +1,10 @@
 // Manager
-
-/*
 #include <iostream>
 #include "Binnacle_Render_Manager.hpp"
 
 #include "RenderManager.hpp"
 #include <SOIL/SOIL.h>
+#include "MathHelper.hpp"
 
 int main(int argc, char **argv)
 {
@@ -24,7 +23,7 @@ int main(int argc, char **argv)
 	//const auto grid_rows = 2;
 	//
 	//const auto index_count = (grid_cols - 1) * (grid_rows - 1) * 6;
-	//const auto indices = new unsigned short[index_count];
+	//const auto indices = new unsigned int[index_count];
 	//for (auto i = 0; i < (grid_cols - 1) * (grid_rows - 1); ++i)
 	//{
 	//	const auto i1 = i + i / grid_cols;
@@ -55,23 +54,48 @@ int main(int argc, char **argv)
 	//binnacle_release();
 	//
 	//return 0;
+
 	render_manager rm(false, 4, 3, 0, 640, 480, "OpenGL");
-	
-	rm.select_renderer(BINNACLE);
-	
-	rm.select_scene(std::make_shared<scene>()); // TODO: reduce
-	
-	rm.set_environment(camera(glm::vec3(), glm::vec3(), glm::vec3(), 45, rm.get_aspect_ratio(), 1, 20));  // TODO: reduce
+
+	rm.init_renderer();
+
 	rm.set_lights(light(glm::vec3(1.0f, 0.1f, 4.0f), glm::vec3(1.0f, 1.0f, 1.0f), 40, 60),
-				  light(glm::vec3(3.0f, 0.8f, -0.1f), glm::vec3(0.75f, 0.75f, 1.0f), 40, 50));
+		light(glm::vec3(3.0f, 0.8f, -0.1f), glm::vec3(0.75f, 0.75f, 1.0f), 40, 50));
+	rm.set_camera(glm::vec3(), glm::vec3(), glm::vec3(), 45, rm.get_aspect_ratio(), 1, 20);
 	
 	const auto shader_program_id = rm.create_shader_program("vertex.glsl", "fragment_brdf.glsl");
 	const auto mat_id_tex = rm.create_material(shader_program_id, "leather_a.png", "leather_nr.png");
 	const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(0.0f, 0.2f, 0.9f));
 
+	const auto model = rm.load_model("monkey.obj", true, mat_id_tex);
+
+	const int instance_count = 1;
+	std::vector<model_handle> handles;
+	for (int i = 0; i < instance_count; ++i)
+	{
+		const auto instance = rm.instance_model(model);
+		handles.push_back(rm.get_instance_handle(instance));
+		const auto angle = i / static_cast<float>(instance_count) * 2 * PI;
+		handles[handles.size() - 1].assign_position(sin(angle) * 4, 0, -cos(angle) * 4 + 5);
+		handles[handles.size() - 1].scale(0.4);
+	}
+
 	//rm.load_model("monkey.obj", true, mat_id_tex);
-	//rm.load_model("even_cube.obj", false, mat_id_tex);
-	rm.load_model("cube.obj", true, mat_id_notex);
+	//const auto model1 = rm.load_model("even_cube.obj", false, mat_id_tex);
+	//const auto model2 = rm.load_model("cube.obj", true, mat_id_notex);
+	//
+	//const auto model1_instance = rm.instance_model(model1);
+	//const auto model2_instance = rm.instance_model(model2);
+	//
+	//const auto model1_instance_handle = rm.get_instance_handle(model1_instance);
+	//const auto model2_instance_handle = rm.get_instance_handle(model2_instance);
+	//
+	//model1_instance_handle.assign_position(-0.6, 0, 0);
+	//model1_instance_handle.assign_scale(0.4, 0.4, 0.4);
+	//
+	//model2_instance_handle.assign_position(0.6, 0, 0);
+	//model2_instance_handle.assign_scale(0.4, 0.4, 0.4);
+
 	//rm.load_model("cube.obj", true, mat_id_notex);
 	//rm.load_model("double_tri.obj", false, mat_id_notex);
 	//rm.load_model("plane.obj", false, mat_id_notex);
@@ -83,17 +107,21 @@ int main(int argc, char **argv)
 
 	//rm.update();
 	//rm.render();
-	rm.update();
+	//rm.update();
 
-	rm.init_texture_rendering(640, 480);
-	delete rm.render_to_texture(true);
+	//rm.init_texture_rendering(640, 480);
+	//delete rm.render_to_texture(true);
 
-	//while (!rm.should_end())
-	//{
-	//	rm.update();
-	//	rm.render();
-	//}
+	while (!rm.should_end())
+	{
+		const auto speed = rm.update();
+		const auto angle = 40.0f;
+		for (auto && handle : handles)
+		{
+			handle.rotate(0, 1, 0, angle / 360.0f * PI * speed);
+		}
+		rm.render();
+	}
 
 	return 0;
 }
-*/

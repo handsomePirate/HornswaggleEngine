@@ -16,10 +16,9 @@ extern "C"
 	BINNACLE_API float binnacle_get_aspect_ratio();
 
 	BINNACLE_API int binnacle_create_shader_program(const std::string& vertex_shader_file, const std::string& fragment_shader_file, const std::string& geometry_shader_file = "");
-	BINNACLE_API void binnacle_select_renderer(rm_choice rmc);
-	BINNACLE_API void binnacle_clear_scene();
+	BINNACLE_API void binnacle_init_renderer();
 
-	BINNACLE_API void binnacle_load_model_data(float *vertex_positions, size_t vertex_count, unsigned short *indices, size_t index_count, int mat_id = -1);
+	BINNACLE_API void binnacle_load_model_data(float *vertex_positions, size_t vertex_count, unsigned int *indices, size_t index_count, int mat_id = -1);
 
 	BINNACLE_API unsigned char *binnacle_render_to_texture(bool screen = false);
 	BINNACLE_API void binnacle_dispose_texture(const unsigned char *pixels);
