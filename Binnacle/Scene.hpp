@@ -318,8 +318,8 @@ struct model_instance
 	model_instance()
 		: model_instance(nullptr, 0) {}
 
-	model_instance(model *m, unsigned int start_index)
-		: prev(nullptr), next(nullptr), m(m), orientation_(0, 0, 0, 1), position_(0), scale_(1), start_index_(start_index) {}
+	model_instance(model *m, const unsigned int start_index)
+		: prev(nullptr), next(nullptr), m(m), orientation_(1, 0, 0, 0), position_(0), scale_(1), start_index_(start_index) {}
 
 	~model_instance();
 
@@ -345,7 +345,7 @@ struct model_instance
 
 	void register_handle(model_handle *mh);
 
-	unsigned int get_start_index();
+	unsigned int get_start_index() const;
 
 	model_instance *prev;
 	model_instance *next;

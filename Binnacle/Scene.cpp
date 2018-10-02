@@ -5,6 +5,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <iostream>
 
 void split_from(const std::string& str, size_t index, const char c, std::string& before, std::string& after)
@@ -635,14 +636,16 @@ int model_instance::transform_vertices_to(vertex *pos, const int index, const bo
 {
 	if (transformed_ || change || index != last_vertex_transform_index_)
 	{
-		model_matrix_ = glm::scale(glm::translate(glm::mat4(1.0f), glm::vec3(position_)), scale_);
+		const auto translate_mat = glm::translate(glm::mat4(1.0f), glm::vec3(position_));
+		const auto scale_mat = glm::scale(glm::mat4(1.0f), scale_);
+		model_matrix_ = translate_mat * toMat4(orientation_) * scale_mat; //glm::mat4(1.0f)
 		auto curr = m->get_vertex_data();
 
 		for (unsigned int i = 0; i < m->get_vertex_count(); ++i)
 		{
 			*pos = *curr;
 
-			pos->set_position(orientation_ * (model_matrix_ * curr->get_position()));
+			pos->set_position((model_matrix_ * curr->get_position()));
 			pos->set_normal(orientation_ * curr->get_normal());
 			pos->set_tangent(orientation_ * curr->get_tangent());
 
@@ -786,7 +789,7 @@ void model_instance::register_handle(model_handle* mh)
 	registered_handles_.push_back(mh);
 }
 
-unsigned model_instance::get_start_index()
+unsigned model_instance::get_start_index() const
 {
 	return start_index_;
 }

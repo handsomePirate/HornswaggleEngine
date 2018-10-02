@@ -61,15 +61,15 @@ int main(int argc, char **argv)
 
 	rm.set_lights(light(glm::vec3(1.0f, 0.1f, 4.0f), glm::vec3(1.0f, 1.0f, 1.0f), 40, 60),
 		light(glm::vec3(3.0f, 0.8f, -0.1f), glm::vec3(0.75f, 0.75f, 1.0f), 40, 50));
-	rm.set_camera(glm::vec3(), glm::vec3(), glm::vec3(), 45, rm.get_aspect_ratio(), 1, 20);
+	rm.set_camera(glm::vec3(), glm::vec3(), glm::vec3(), 45, rm.get_aspect_ratio(), 0.1, 20);
 	
 	const auto shader_program_id = rm.create_shader_program("vertex.glsl", "fragment_brdf.glsl");
 	const auto mat_id_tex = rm.create_material(shader_program_id, "leather_a.png", "leather_nr.png");
-	const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(0.0f, 0.2f, 0.9f));
+	const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(0.06f, 0.3f, 0.9f));
 
 	const auto model = rm.load_model("monkey.obj", true, mat_id_tex);
 
-	const int instance_count = 1;
+	const int instance_count = 8;
 	std::vector<model_handle> handles;
 	for (int i = 0; i < instance_count; ++i)
 	{
@@ -112,13 +112,17 @@ int main(int argc, char **argv)
 	//rm.init_texture_rendering(640, 480);
 	//delete rm.render_to_texture(true);
 
+	rm.start_framerate();
 	while (!rm.should_end())
 	{
-		const auto speed = rm.update();
+		const auto time_elapsed = rm.update();
 		const auto angle = 40.0f;
+		//model1_instance_handle.rotate(1, 0, 0, angle / 360.0f * PI * time_elapsed);
 		for (auto && handle : handles)
 		{
-			handle.rotate(0, 1, 0, angle / 360.0f * PI * speed);
+			handle.translate(0.1f * time_elapsed, 0, 0);
+			//handle.rotate(0, 1, 0, angle / 360.0f * PI * time_elapsed);
+			//handle.rotate(1, 0, 0, angle / 360.0f * PI * speed);
 		}
 		rm.render();
 	}

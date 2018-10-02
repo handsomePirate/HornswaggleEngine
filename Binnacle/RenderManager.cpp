@@ -396,6 +396,13 @@ void render_manager::load_environment_cube_map(const std::string& neg_z, const s
 
 #define time_now std::chrono::high_resolution_clock::now()
 
+void render_manager::start_framerate()
+{
+	last_update_ = time_now;
+	frame_start_ = time_now;
+	frame_count_ = 0;
+}
+
 float render_manager::get_fps()
 {
 	const auto result = frame_count_ / get_seconds(frame_start_);
@@ -407,12 +414,6 @@ float render_manager::get_fps()
 float render_manager::update()
 {
 	float time_elapsed = 0;
-	if (first_update_)
-	{
-		frame_start_ = time_now;
-		frame_count_ = 0;
-		first_update_ = false;
-	}
 
 	if (glfwWindowShouldClose(window_))
 		should_end_ = true;

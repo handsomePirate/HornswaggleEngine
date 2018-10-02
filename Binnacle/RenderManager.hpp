@@ -69,6 +69,8 @@ struct render_manager
 								   const std::string& neg_x, const std::string& pos_x, 
 								   const std::string& neg_y, const std::string& pos_y) const;
 
+	void start_framerate();
+
 	float update();
 	void render() const;
 
@@ -131,8 +133,6 @@ private:
 	unsigned long frame_count_ = 0;
 
 	std::chrono::high_resolution_clock::time_point last_update_;
-
-	bool first_update_ = true;
 
 	unsigned int vertex_count_ = 0;
 	unsigned int poly_count_ = 0;
