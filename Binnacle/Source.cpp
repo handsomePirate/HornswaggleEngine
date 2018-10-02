@@ -1,5 +1,4 @@
 // Manager
-#include <iostream>
 #include "Binnacle_Render_Manager.hpp"
 
 #include "RenderManager.hpp"
@@ -70,13 +69,14 @@ int main(int argc, char **argv)
 	const auto model = rm.load_model("monkey.obj", true, mat_id_tex);
 
 	const int instance_count = 8;
-	std::vector<model_handle> handles;
+	std::vector<instance_handle> handles;
+	const float circle_size = 1.6f;
 	for (int i = 0; i < instance_count; ++i)
 	{
 		const auto instance = rm.instance_model(model);
 		handles.push_back(rm.get_instance_handle(instance));
 		const auto angle = i / static_cast<float>(instance_count) * 2 * PI;
-		handles[handles.size() - 1].assign_position(sin(angle) * 4, 0, -cos(angle) * 4 + 5);
+		handles[handles.size() - 1].assign_position(sin(angle) * circle_size, 0, -cos(angle) * circle_size + 5);
 		handles[handles.size() - 1].scale(0.4);
 	}
 
@@ -112,6 +112,8 @@ int main(int argc, char **argv)
 	//rm.init_texture_rendering(640, 480);
 	//delete rm.render_to_texture(true);
 
+	rm.delete_model_instance(7);
+
 	rm.start_framerate();
 	while (!rm.should_end())
 	{
@@ -120,9 +122,8 @@ int main(int argc, char **argv)
 		//model1_instance_handle.rotate(1, 0, 0, angle / 360.0f * PI * time_elapsed);
 		for (auto && handle : handles)
 		{
-			handle.translate(0.1f * time_elapsed, 0, 0);
-			//handle.rotate(0, 1, 0, angle / 360.0f * PI * time_elapsed);
-			//handle.rotate(1, 0, 0, angle / 360.0f * PI * speed);
+			handle.rotate(0, 1, 0, angle / 360.0f * PI * time_elapsed);
+			handle.rotate(1, 0, 0, angle / 360.0f * PI * time_elapsed);
 		}
 		rm.render();
 	}

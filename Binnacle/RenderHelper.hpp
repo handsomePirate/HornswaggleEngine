@@ -4,10 +4,12 @@
 
 struct model_instance;
 
-struct model_handle
+// This structure is used to enable the users of the render manager to transform the model instances in use
+struct instance_handle
 {
-	explicit model_handle(model_instance *mi);
+	explicit instance_handle(model_instance *mi);
 
+	// relative
 	void rotate(const glm::vec3& axis, float angle) const;
 	void rotate(float x, float y, float z, float angle) const;
 	void translate(const glm::vec4& offset) const;
@@ -15,6 +17,7 @@ struct model_handle
 	void scale(const glm::vec3& ratio) const;
 	void scale(float ratio) const;
 
+	// absolute
 	void assign_position(const glm::vec4& position) const;
 	void assign_position(float x, float y, float z) const;
 	void assign_orientation(const glm::quat& orientation) const;
@@ -22,6 +25,7 @@ struct model_handle
 	void assign_scale(const glm::vec3& scale) const;
 	void assign_scale(float x, float y, float z) const;
 
+	// remove the instance reference from the handle (used mainly, when the instance is deleted)
 	void delete_instance_reference();
 
 private:

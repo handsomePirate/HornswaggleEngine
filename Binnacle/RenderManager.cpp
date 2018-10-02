@@ -302,13 +302,13 @@ void render_manager::delete_model_instance(const int index) const
 	scn_ptr_->delete_model_instance(index);
 }
 
-model_handle render_manager::get_instance_handle(const int index) const
+instance_handle render_manager::get_instance_handle(const int index) const
 {
 	if (scn_ptr_)
 	{
-		return model_handle(scn_ptr_->get_instance(index));
+		return instance_handle(scn_ptr_->get_instance(index));
 	}
-	return model_handle(nullptr);
+	return instance_handle(nullptr);
 }
 
 int render_manager::create_material(const GLuint program, const std::string& filename_texture, const std::string& filename_normals)

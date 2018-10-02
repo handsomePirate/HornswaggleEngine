@@ -11,6 +11,7 @@
 
 #include <GLFW/glfw3.h>
 
+// The pixel form structure
 struct rgba
 {
 	unsigned char r;
@@ -20,8 +21,6 @@ struct rgba
 };
 
 // Serves the purpose of maintaining the renderer to use, the scene to render and the window to render to
-// TODO: make it possible to render to texture
-// TODO: monitor window size changes
 struct render_manager
 {
 	render_manager();
@@ -32,48 +31,65 @@ struct render_manager
 	render_manager& operator=(render_manager && rm) = default;
 	virtual ~render_manager();
 
+	// Has been properly initialized?
 	bool is_valid() const;
 
 	float get_aspect_ratio() const;
 
+	// Assemble the shader program to use from source files
 	int create_shader_program(const std::string& vertex_shader_file, const std::string& fragment_shader_file, const std::string& geometry_shader_file = "") const;
 	void init_renderer();
 
+	// Append/Clear&Append new light sources
 	template<class ...T>
 	void add_lights(T&&... args);
 	template<class ...T>
 	void set_lights(T&&... args);
 
+	// Prepare the renderer to render to a texture
 	void init_texture_rendering(int width, int height);
 	unsigned char *render_to_texture(bool screen = false) const;
 
 	void set_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, float fov, float aspect, float z_near, float z_far) const;
 	camera& get_camera() const;
 
+	// Load an OBJ model from a file (returns its assigned id)
 	int load_model(const std::string& filename_model, bool smooth, int mat_id = -1);
 	int load_model_data(vertex *vertices, size_t vertex_count, unsigned int *indices, size_t index_count, int mat_id = -1);
 	int load_model_data(float *vertex_positions, size_t vertex_count, unsigned int* indices, size_t index_count, int mat_id = -1);
+	// Delete a model identified by its id
 	void delete_model(int index);
 
+	// Create an instance of a model identified by its id
 	int instance_model(int index);
+	// Create an instance of a model identified by the instance id
 	void delete_model_instance(int index) const;
 
-	model_handle get_instance_handle(int index) const;
+	// Get a handle of a model instance to be able to transform it
+	instance_handle get_instance_handle(int index) const;
 
+	// Create a textured material (get its id)
 	int create_material(GLuint program, const std::string& filename_texture = "", const std::string& filename_normals = "");
+	// Create a colored material (get its id)
 	int create_material(GLuint program, const glm::vec3& color, const std::string& filename_normals = "");
 	int create_material(GLuint program, float r, float g, float b, const std::string& filename_normals = "");
+	// Delete a material by its id
 	void delete_material(int index);
 
+	// Load an environment cube map from six images
 	void load_environment_cube_map(const std::string& neg_z, const std::string& pos_z, 
 								   const std::string& neg_x, const std::string& pos_x, 
 								   const std::string& neg_y, const std::string& pos_y) const;
 
+	// Press the timer
 	void start_framerate();
 
+	// Update matrices etc., alternates with "render"
 	float update();
+	// Render all the loaded model instances
 	void render() const;
 
+	// OpenGL needs to terminate the window or the user requests it
 	bool should_end() const;
 private:
 	void init_scene();

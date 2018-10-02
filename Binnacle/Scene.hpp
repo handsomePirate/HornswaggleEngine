@@ -17,7 +17,7 @@
 		{id = next_free++;}\
 	else {id = free_vec.front(); free_vec.pop();}
 
-
+// The fictional camera representation
 struct camera
 {
 	camera();
@@ -343,7 +343,9 @@ struct model_instance
 	void assign_scale(const glm::vec3& scale);
 	void assign_scale(float x, float y, float z);
 
-	void register_handle(model_handle *mh);
+	void register_handle(instance_handle *mh);
+
+	void change_start_index_by(int amount);
 
 	unsigned int get_start_index() const;
 
@@ -364,7 +366,7 @@ private:
 	int last_vertex_transform_index_ = -1;
 	int last_index_transform_index_ = -1;
 
-	std::vector<model_handle *> registered_handles_;
+	std::vector<instance_handle *> registered_handles_;
 
 	unsigned int start_index_ = 0; // TODO: change with deletion
 };

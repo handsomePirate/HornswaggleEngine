@@ -6,6 +6,7 @@
 #include "Scene.hpp"
 #include "Shader.hpp"
 
+// The object that takes care of rasterazing the scene
 struct renderer
 {
 	renderer();

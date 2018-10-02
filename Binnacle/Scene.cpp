@@ -784,9 +784,16 @@ void model_instance::assign_scale(const float x, const float y, const float z)
 	scale_ = glm::vec3(x, y, z);
 }
 
-void model_instance::register_handle(model_handle* mh)
+void model_instance::register_handle(instance_handle* mh)
 {
 	registered_handles_.push_back(mh);
+}
+
+void model_instance::change_start_index_by(const int amount)
+{
+	start_index_ += amount;
+	if (prev)
+		prev->change_start_index_by(amount);
 }
 
 unsigned model_instance::get_start_index() const
@@ -1016,11 +1023,18 @@ void scene::delete_model_instance(const int index)
 		return;
 
 	const auto& m = it->second->m;
+
+	const int vc = m->get_vertex_count();
+	if (it->second->prev)
+		it->second->prev->change_start_index_by(-vc);
+
 	(*pck_ptr_)[m->get_material_index()].vertex_count -= m->get_vertex_count();
 	(*pck_ptr_)[m->get_material_index()].index_count -= m->get_index_count();
 
 	if (!it->second->prev)
 		(*pck_ptr_)[m->get_material_index()].model_instances_linked_list_start = it->second->next;
+	if (!it->second->next)
+		(*pck_ptr_)[m->get_material_index()].model_instances_linked_list_end = it->second->prev;
 	
 	mod_free_ids_.push(index);
 
