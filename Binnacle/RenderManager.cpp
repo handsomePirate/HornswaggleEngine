@@ -297,8 +297,11 @@ int render_manager::instance_model(const int index)
 	return -1;
 }
 
-void render_manager::delete_model_instance(const int index) const
+void render_manager::delete_model_instance(const int index)
 {
+	auto *m = scn_ptr_->get_instance(index)->m;
+	vertex_count_ -= m->get_vertex_count();
+	poly_count_ -= m->get_poly_count();
 	scn_ptr_->delete_model_instance(index);
 }
 
@@ -415,7 +418,7 @@ float render_manager::update()
 {
 	float time_elapsed = 0;
 
-	if (glfwWindowShouldClose(window_))
+	if (glfwWindowShouldClose(window_) || keys_manager_[GLFW_KEY_ESCAPE])
 		should_end_ = true;
 
 	if (valid_ && scn_ptr_ && env_ptr_)
@@ -511,9 +514,6 @@ void render_manager::key_callback(GLFWwindow* window, const int key, const int s
 		std::cout << "poly count: " << poly_count_ << std::endl;
 		std::cout << "FPS: " << get_fps() << std::endl;
 	}
-
-	if (key == GLFW_KEY_ESCAPE)
-		should_end_ = true;
 }
 
 void render_manager::mouse_move_callback(GLFWwindow* window, const double x_pos, const double y_pos)

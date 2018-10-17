@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 
 	rm.set_lights(light(glm::vec3(1.0f, 0.1f, 4.0f), glm::vec3(1.0f, 1.0f, 1.0f), 40, 60),
 		light(glm::vec3(3.0f, 0.8f, -0.1f), glm::vec3(0.75f, 0.75f, 1.0f), 40, 50));
-	rm.set_camera(glm::vec3(), glm::vec3(), glm::vec3(), 45, rm.get_aspect_ratio(), 0.1, 20);
+	rm.set_camera(glm::vec3(), glm::vec3(), glm::vec3(), 45, rm.get_aspect_ratio(), 0.1, 100);
 	
 	const auto shader_program_id = rm.create_shader_program("vertex.glsl", "fragment_brdf.glsl");
 	const auto mat_id_tex = rm.create_material(shader_program_id, "leather_a.png", "leather_nr.png");
@@ -68,7 +68,7 @@ int main(int argc, char **argv)
 
 	const auto model = rm.load_model("monkey.obj", true, mat_id_tex);
 
-	const int instance_count = 8;
+	const int instance_count = 128;
 	std::vector<instance_handle> handles;
 	const float circle_size = 1.6f;
 	for (int i = 0; i < instance_count; ++i)
@@ -103,21 +103,28 @@ int main(int argc, char **argv)
 	//rm.load_environment_cube_map("cubemap//neg_z.png", "cubemap//pos_z.png", "cubemap//neg_x.png", "cubemap//pos_x.png", "cubemap//neg_y.png", "cubemap//pos_y.png");
 	//rm.load_environment_cube_map("cubemap//uni.png", "cubemap//uni.png", "cubemap//uni.png", "cubemap//uni.png", "cubemap//uni.png", "cubemap//uni.png");
 	//rm.load_environment_cube_map("cubemap//z.png", "cubemap//z.png", "cubemap//x.png", "cubemap//x.png", "cubemap//y.png", "cubemap//y.png");
-	rm.load_environment_cube_map("cubemap//cubemap_neg_z.png", "cubemap//cubemap_pos_z.png", "cubemap//cubemap_neg_x.png", "cubemap//cubemap_pos_x.png", "cubemap//cubemap_neg_y.png", "cubemap//cubemap_pos_y.png");
-
-	//rm.update();
-	//rm.render();
-	//rm.update();
+	rm.load_environment_cube_map(
+		"cubemap//cubemap_neg_z.png", "cubemap//cubemap_pos_z.png", 
+		"cubemap//cubemap_neg_x.png", "cubemap//cubemap_pos_x.png", 
+		"cubemap//cubemap_neg_y.png", "cubemap//cubemap_pos_y.png");
 
 	//rm.init_texture_rendering(640, 480);
 	//delete rm.render_to_texture(true);
 
-	rm.delete_model_instance(7);
+	auto counter = instance_count - 1;
+	auto total_time = 0.0f;
 
 	rm.start_framerate();
 	while (!rm.should_end())
 	{
 		const auto time_elapsed = rm.update();
+		total_time += time_elapsed;
+		if (total_time > 0.1f && counter > 0)
+		{
+			total_time = 0;
+			rm.delete_model_instance(counter--);
+		}
+
 		const auto angle = 40.0f;
 		//model1_instance_handle.rotate(1, 0, 0, angle / 360.0f * PI * time_elapsed);
 		for (auto && handle : handles)

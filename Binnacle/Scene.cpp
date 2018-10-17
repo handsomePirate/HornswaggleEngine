@@ -1073,18 +1073,35 @@ void scene::disable_material(const int mat_id) const
 const std::vector<vertex>& scene::get_vertices(const int mat_id) const
 {
 	auto change = false;
-	if ((*pck_ptr_)[mat_id].transformed_vertices.size() != (*pck_ptr_)[mat_id].vertex_count)
+	auto size = (*pck_ptr_)[mat_id].transformed_vertices.size();
+
+	if (size != (*pck_ptr_)[mat_id].vertex_count)
 	{
 		(*pck_ptr_)[mat_id].transformed_vertices.resize((*pck_ptr_)[mat_id].vertex_count);
 		change = true;
 	}
+	//if (size < (*pck_ptr_)[mat_id].vertex_count)  // TODO: output size if to be used
+	//{
+	//	while (size < (*pck_ptr_)[mat_id].vertex_count)
+	//		size *= 2;
+	//
+	//	(*pck_ptr_)[mat_id].transformed_vertices.resize(size);
+	//	change = true;
+	//}
+	//
+	//if (size / 5 * 2 > (*pck_ptr_)[mat_id].vertex_count)
+	//{
+	//	size /= 2;
+	//	(*pck_ptr_)[mat_id].transformed_vertices.resize(size);
+	//	change = true;
+	//}
 #ifdef DEBUG_LIMIT_INDICES
 	transformed_vertices_.resize(DEBUG_LIMIT_INDICES);
 #endif
 	int index = 0;
 	auto mi = (*pck_ptr_)[mat_id].model_instances_linked_list_end;
 
-	while (mi != nullptr)
+	while (change && mi != nullptr)
 	{
 		index = mi->transform_vertices_to(&(*pck_ptr_)[mat_id].transformed_vertices[index], index, change);
 		mi = mi->prev;
@@ -1096,16 +1113,32 @@ const std::vector<vertex>& scene::get_vertices(const int mat_id) const
 const std::vector<unsigned int>& scene::get_indices(const int mat_id) const
 {
 	auto change = false;
-	if ((*pck_ptr_)[mat_id].indices.size() != (*pck_ptr_)[mat_id].index_count)
+	auto size = (*pck_ptr_)[mat_id].indices.size();
+	if (size != (*pck_ptr_)[mat_id].index_count)
 	{
 		(*pck_ptr_)[mat_id].indices.resize((*pck_ptr_)[mat_id].index_count);
 		change = true;
 	}
+	//if (size != (*pck_ptr_)[mat_id].index_count) // TODO: output size if to be used
+	//{
+	//	while (size < (*pck_ptr_)[mat_id].index_count)
+	//		size *= 2;
+	//
+	//	(*pck_ptr_)[mat_id].indices.resize(size);
+	//	change = true;
+	//}
+	//
+	//if (size / 5 * 2 >(*pck_ptr_)[mat_id].index_count)
+	//{
+	//	size /= 2;
+	//	(*pck_ptr_)[mat_id].indices.resize(size);
+	//	change = true;
+	//}
 
 	int index = 0;
 	auto mi = (*pck_ptr_)[mat_id].model_instances_linked_list_end;
 
-	while (mi != nullptr)
+	while (change && mi != nullptr)
 	{
 		index = mi->transform_indices_to(&(*pck_ptr_)[mat_id].indices[index], index, change);
 		mi = mi->prev;

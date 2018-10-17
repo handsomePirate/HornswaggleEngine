@@ -63,7 +63,7 @@ struct render_manager
 	// Create an instance of a model identified by its id
 	int instance_model(int index);
 	// Create an instance of a model identified by the instance id
-	void delete_model_instance(int index) const;
+	void delete_model_instance(int index);
 
 	// Get a handle of a model instance to be able to transform it
 	instance_handle get_instance_handle(int index) const;

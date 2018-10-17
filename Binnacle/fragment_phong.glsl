@@ -42,25 +42,24 @@ layout(location = 0) out vec4 fragColor;
 void main(void)
 {
 	vec3 normal;
-	//normal = varNorm;
-
-	float normal_strength = 1;
-
-	normal = texture(normalMap, coords).rgb;
-	normal = normalize(normal * 2.0 - 1.0);
-	normal = mix(vec3(0, 0, 1), normal, normal_strength);
-
-	normal = normalize(TBN * normal);
+	normal = varNorm;
 
 	vec3 diffuse_color;
+	diffuse_color = material.color;
 	// Sampling from texture
 
 	if (useTexture)
-		diffuse_color = vec3(texture(diffuseMap, coords));
-	else
-		diffuse_color = material.color;
+	{
+		float normal_strength = 1;
 
-	fragColor = vec4(diffuse_color.r, 0, 0, 1);
+		normal = texture(normalMap, coords).rgb;
+		normal = normalize(normal * 2.0 - 1.0);
+		normal = mix(vec3(0, 0, 1), normal, normal_strength);
+
+		normal = normalize(TBN * normal);
+
+		diffuse_color = vec3(texture(diffuseMap, coords));
+	}	
 
 	//const float ambience_c = 0.2;
 	//const float diffuse_c = 1.0;
