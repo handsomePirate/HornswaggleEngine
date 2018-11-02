@@ -135,6 +135,16 @@ bool shader_program::compile_and_link_shaders()
 		return false;
 	}
 
+	glDeleteShader(vertex_shader);
+	glDeleteShader(fragment_shader);
+	if (has_geometry_shader)
+		glDeleteShader(geometry_shader);
+
+	return true;
+}
+
+bool shader_program::validate() const
+{
 	glValidateProgram(program_);
 
 	GLint validated;
@@ -145,12 +155,6 @@ bool shader_program::compile_and_link_shaders()
 		CHECK_PROGRAM_LOG(program_, "program validating:");
 		return false;
 	}
-
-	glDeleteShader(vertex_shader);
-	glDeleteShader(fragment_shader);
-	if (has_geometry_shader)
-		glDeleteShader(geometry_shader);
-
 	return true;
 }
 
@@ -212,22 +216,28 @@ void shader_program::update(const std::shared_ptr<environment>& env_ptr) const
 }
 
 material::material()
-	: use_texture_(false), color_(0.0f, 0.0f, 0.0f), program_(0), initialized_(false) {}
+	: use_texture_(false), color_(0), specular_color_(1), program_(0), initialized_(false) {}
 
 material::material(const GLuint program)
-	: use_texture_(true), color_(0.0f, 0.0f, 0.0f), program_(program), initialized_(true) {}
+	: use_texture_(true), color_(0), specular_color_(1), program_(program), initialized_(true) {}
 
 material::material(const std::string& filename_texture, const GLuint program)
-	: texture_(filename_texture), use_texture_(true), color_(0.0f, 0.0f, 0.0f), program_(program), initialized_(true) {}
+	: texture_(filename_texture), use_texture_(true), color_(0), specular_color_(1), program_(program), initialized_(true) {}
 
 material::material(const std::string& filename_texture, const std::string& filename_normals, const GLuint program)
-	: texture_(filename_texture), normal_map_(filename_normals), use_texture_(true), color_(0.0f, 0.0f, 0.0f), program_(program), initialized_(true) {}
+	: texture_(filename_texture), normal_map_(filename_normals), use_texture_(true), color_(1), specular_color_(1), program_(program), initialized_(true) {}
 
 material::material(const glm::vec3& color, const GLuint program)
-	: use_texture_(false), color_(color), program_(program), initialized_(true) {}
+	: use_texture_(false), color_(color), specular_color_(1), program_(program), initialized_(true) {}
 
 material::material(const glm::vec3& color, const std::string& filename_normals, const GLuint program)
-	: normal_map_(filename_normals), use_texture_(false), color_(color), program_(program), initialized_(true) {}
+	: normal_map_(filename_normals), use_texture_(false), color_(color), specular_color_(1), program_(program), initialized_(true) {}
+
+material::material(const glm::vec3& specular_color, const glm::vec3& color, GLuint program)
+	: use_texture_(false), color_(color), specular_color_(specular_color), program_(program), initialized_(true) {}
+
+material::material(const glm::vec3& specular_color, const glm::vec3& color, const std::string& filename_normals, GLuint program)
+	: normal_map_(filename_normals), use_texture_(false), color_(color), specular_color_(specular_color), program_(program), initialized_(true) {}
 
 void material::set_as_active() const
 {
@@ -253,6 +263,9 @@ void material::update()
 	
 	const auto mat_color_loc = glGetUniformLocation(program_, "material.color");
 	glUniform3fv(mat_color_loc, 1, &color_[0]);
+
+	const auto mat_specular_color_loc = glGetUniformLocation(program_, "material.specular_color");
+	glUniform3fv(mat_specular_color_loc, 1, &specular_color_[0]);
 
 	const float ka = 0.2f;
 	const float kd = 1.0f;

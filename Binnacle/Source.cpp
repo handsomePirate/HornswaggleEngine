@@ -66,9 +66,9 @@ int main(int argc, char **argv)
 	const auto mat_id_tex = rm.create_material(shader_program_id, "leather_a.png", "leather_nr.png");
 	const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(0.06f, 0.3f, 0.9f));
 
-	const auto model = rm.load_model("monkey.obj", true, mat_id_tex);
+	const auto model = rm.load_model("Human_body.obj", true, mat_id_notex);
 
-	const int instance_count = 128;
+	const int instance_count = 4;
 	std::vector<instance_handle> handles;
 	const float circle_size = 1.6f;
 	for (int i = 0; i < instance_count; ++i)
@@ -129,8 +129,8 @@ int main(int argc, char **argv)
 		//model1_instance_handle.rotate(1, 0, 0, angle / 360.0f * PI * time_elapsed);
 		for (auto && handle : handles)
 		{
-			handle.rotate(0, 1, 0, angle / 360.0f * PI * time_elapsed);
-			handle.rotate(1, 0, 0, angle / 360.0f * PI * time_elapsed);
+			//handle.rotate(0, 1, 0, angle / 360.0f * PI * time_elapsed);
+			//handle.rotate(1, 0, 0, angle / 360.0f * PI * time_elapsed);
 		}
 		rm.render();
 	}

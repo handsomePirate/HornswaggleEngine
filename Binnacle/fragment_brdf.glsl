@@ -16,6 +16,7 @@ struct Material
 
   float shininess;
 
+  vec3 specular_color;
   vec3 color;
 };
 
@@ -36,9 +37,18 @@ uniform bool useTexture;
 
 uniform Material material;
 
-//out vec4 fragColor;
-
 layout(location = 0) out vec4 fragColor;
+
+float brdf(vec3 wi, vec3 wo)
+{
+	// compute D 
+	// compute F 
+	// compute G
+
+	float reflectance = 0;//F * D * G / (dot(varNorm, wi) * dot(varNorm, wo) * 4);
+
+	return reflectance * material.specular_color;
+}
 
 void main(void)
 {

@@ -92,6 +92,8 @@ void camera::translate_local(const float dx, const float dy, const float dz)
 
 void camera::translate_local_2_d(const glm::vec3& offset)
 {
+	if (offset.x == 0 && offset.y == 0 && offset.z == 0)
+		return;
 	glm::vec3 new_offset = get_local_to_global_matrix() * glm::vec4(offset, 1.0f);
 	new_offset.y = 0.0f;
 	new_offset = normalize(new_offset) * length(offset);

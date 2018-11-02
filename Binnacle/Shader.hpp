@@ -31,6 +31,8 @@ struct shader_program
 	bool load_shader(shader_type&& type, const std::string& filename);
 	bool compile_and_link_shaders();
 
+	bool validate() const;
+
 	GLuint get_id() const;
 
 	void update(const std::shared_ptr<environment>& env_ptr) const;
@@ -49,6 +51,8 @@ struct material
 	material(const std::string& filename_texture, const std::string& filename_normals, GLuint program);
 	material(const glm::vec3& color, GLuint program);
 	material(const glm::vec3& color, const std::string& filename_normals, GLuint program);
+	material(const glm::vec3& specular_color, const glm::vec3& color, GLuint program);
+	material(const glm::vec3& specular_color, const glm::vec3& color, const std::string& filename_normals, GLuint program);
 
 	material(const material& rm) = delete;
 	material& operator=(const material& rm) = delete;
@@ -65,6 +69,7 @@ protected:
 	texture normal_map_;
 	bool use_texture_;
 	glm::vec3 color_;
+	glm::vec3 specular_color_;
 	GLuint program_;
 
 	bool initialized_;
