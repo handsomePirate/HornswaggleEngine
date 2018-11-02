@@ -32,17 +32,39 @@ renderer::renderer()
 	glDepthFunc(GL_LESS);
 }
 
-void renderer::render(const std::shared_ptr<scene>& scn_ptr, const std::shared_ptr<std::map<int, material>>& mat_ptr) const
+void renderer::render(const std::shared_ptr<scene>& scn_ptr, 
+	const std::shared_ptr<std::map<int, material>>& mat_ptr,
+	const std::shared_ptr<environment>& env_ptr) const
 {
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	//glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT);
 
 	glBindVertexArray(vao_);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vio_);
 
+	if (env_ptr->has_env_map())
+	{
+		glUseProgram(env_ptr->get_shader_program());
+		auto& cube_model = env_ptr->get_environment_cube();
+		vertex vertices[8];
+		const auto vertex_data = cube_model.get_vertex_data();
+		
+		const auto& cam_pos = env_ptr->get_camera().get_position();
+		for (size_t i = 0; i < 8; i++)
+		{
+			vertices[i] = vertex_data[i];
+			vertices[i].translate(cam_pos.x, cam_pos.y, cam_pos.z);
+		}
+		glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(vertex), vertices, GL_DYNAMIC_DRAW);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, 36 * sizeof(unsigned int), cube_model.get_index_data(), GL_DYNAMIC_DRAW);
+		
+		glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
+	
+		glClear(GL_DEPTH_BUFFER_BIT);
+	}
 	for (auto && mat : *mat_ptr)
 	{
 		mat.second.set_as_active();
@@ -58,7 +80,6 @@ void renderer::render(const std::shared_ptr<scene>& scn_ptr, const std::shared_p
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), &indices[0], GL_DYNAMIC_DRAW);
 		if (!indices.empty())
 			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr); // keep in mind the unsigned int!!!
-																					  //glDrawArrays(GL_TRIANGLES, 0, vertices.size());
 	}
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);

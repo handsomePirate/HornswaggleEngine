@@ -1,4 +1,5 @@
 #version 330 core
+#extension GL_NV_shadow_samplers_cube: enable
 
 struct Material
 {
@@ -18,8 +19,7 @@ in vec3 color;
 in vec2 coords;
 in mat3 TBN;
 
-uniform sampler2D diffuseMap;
-uniform sampler2D normalMap;
+uniform samplerCube cubemap;
 
 uniform vec3 lightPositions[20]; // max number of lights in the scene
 uniform vec3 lightColors[20];
@@ -41,5 +41,5 @@ layout(location = 0) out vec4 fragColor;
 
 void main(void)
 {
-	fragColor = vec4(0.5, 0.5, 0.5, 1);
+	fragColor = vec4(textureCube(cubemap, -varNorm.xyz));
 }

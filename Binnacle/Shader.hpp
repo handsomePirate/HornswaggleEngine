@@ -35,7 +35,7 @@ struct shader_program
 
 	GLuint get_id() const;
 
-	void update(const std::shared_ptr<environment>& env_ptr) const;
+	void update(const std::shared_ptr<environment>& env_ptr, bool first) const;
 private:
 	std::unordered_map<shader_type, std::string> shaders_;
 	GLuint program_;

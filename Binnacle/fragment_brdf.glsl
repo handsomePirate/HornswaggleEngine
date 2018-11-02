@@ -52,7 +52,7 @@ float brdf(vec3 wi, vec3 wo)
 
 void main(void)
 {
-	//fragColor = vec4(abs(varNorm), 1);
+	//fragColor = vec4(1, 0, 0, 1);
 	//return;
 
 	vec3 normal = varNorm;

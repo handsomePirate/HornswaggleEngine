@@ -150,7 +150,7 @@ void render_manager::init_renderer()
 		mod_ptr_ = std::make_unique<std::map<int, model>>();
 		ins_ptr_ = std::make_unique<std::map<int, std::vector<int>>>();
 		init_scene();
-		init_environment();
+		init_environment(create_shader_program("vertex.glsl", "fragment_env_cube.glsl"));
 	}
 }
 
@@ -202,7 +202,7 @@ unsigned char *render_manager::render_to_texture(const bool screen) const
 	glBindFramebuffer(GL_FRAMEBUFFER, texture_fbo_);
 	glViewport(0, 0, texture_width_, texture_height_);
 
-	rnd_ptr_->render(scn_ptr_, mat_ptr_);
+	rnd_ptr_->render(scn_ptr_, mat_ptr_, env_ptr_);
 
 	const auto image_data = new rgba[texture_width_ * texture_height_];
 	glReadPixels(0, 0, texture_width_, texture_height_, GL_RGBA, GL_UNSIGNED_BYTE, reinterpret_cast<unsigned char *>(&image_data[0]));
@@ -395,6 +395,10 @@ void render_manager::load_environment_cube_map(const std::string& neg_z, const s
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	env_ptr_->set_environment_map(tex_id);
+	//glUseProgram(env_ptr_->get_shader_program());
+	//glActiveTexture(GL_TEXTURE31);
+	//glBindTexture(GL_TEXTURE_CUBE_MAP, tex_id);
+
 }
 
 #define time_now std::chrono::high_resolution_clock::now()
@@ -464,8 +468,10 @@ float render_manager::update()
 		if (window_visible_)
 			glfwPollEvents();
 
+		const bool first = env_ptr_->changed();
+		env_ptr_->unset_changed();
 		for (auto && shd : *shd_ptr_)
-			shd.second.update(env_ptr_);
+			shd.second.update(env_ptr_, first);
 	}
 
 	return time_elapsed;
@@ -474,10 +480,10 @@ float render_manager::update()
 
 void render_manager::render() const
 {
-	if (valid_ && rnd_ptr_ && scn_ptr_ && GL_NO_ERROR == glGetError())
+	if (valid_ && rnd_ptr_ && scn_ptr_ && env_ptr_ && GL_NO_ERROR == glGetError())
 	{
 		// glfwMakeContextCurrent(window_);
-		rnd_ptr_->render(scn_ptr_, mat_ptr_);
+		rnd_ptr_->render(scn_ptr_, mat_ptr_, env_ptr_);
 		glfwSwapBuffers(window_);
 	}
 }

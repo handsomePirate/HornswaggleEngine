@@ -65,6 +65,7 @@ int main(int argc, char **argv)
 	const auto shader_program_id = rm.create_shader_program("vertex.glsl", "fragment_brdf.glsl");
 	const auto mat_id_tex = rm.create_material(shader_program_id, "leather_a.png", "leather_nr.png");
 	const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(0.06f, 0.3f, 0.9f));
+	//const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(1.0f, 1.0f, 1.0f));
 
 	const auto model = rm.load_model("Human_body.obj", true, mat_id_notex);
 
@@ -119,11 +120,11 @@ int main(int argc, char **argv)
 	{
 		const auto time_elapsed = rm.update();
 		total_time += time_elapsed;
-		if (total_time > 0.1f && counter > 0)
-		{
-			total_time = 0;
-			rm.delete_model_instance(counter--);
-		}
+		//if (total_time > 0.1f && counter > 0)
+		//{
+		//	total_time = 0;
+		//	rm.delete_model_instance(counter--);
+		//}
 
 		const auto angle = 40.0f;
 		//model1_instance_handle.rotate(1, 0, 0, angle / 360.0f * PI * time_elapsed);

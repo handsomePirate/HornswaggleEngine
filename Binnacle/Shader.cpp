@@ -163,7 +163,7 @@ GLuint shader_program::get_id() const
 	return program_;
 }
 
-void shader_program::update(const std::shared_ptr<environment>& env_ptr) const
+void shader_program::update(const std::shared_ptr<environment>& env_ptr, const bool first) const
 {
 	glUseProgram(program_);
 
@@ -178,9 +178,8 @@ void shader_program::update(const std::shared_ptr<environment>& env_ptr) const
 	const auto view_projection_matrix = projection_matrix * view_matrix;
 	glUniformMatrix4fv(projection_view_matrix_loc, 1, GL_FALSE, &view_projection_matrix[0][0]);
 
-	if (env_ptr->changed())
+	if (first)
 	{
-		env_ptr->unset_changed();
 		if (env_ptr->has_env_map())
 		{
 			env_ptr->shader_load_env_map(program_);

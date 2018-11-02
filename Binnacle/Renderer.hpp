@@ -16,7 +16,9 @@ struct renderer
 	renderer& operator=(renderer && rm) = default;
 	virtual ~renderer() = default;
 
-	void render(const std::shared_ptr<scene>& scn_ptr, const std::shared_ptr<std::map<int, material>>& mat_ptr) const;
+	void render(const std::shared_ptr<scene>& scn_ptr, 
+		const std::shared_ptr<std::map<int, material>>& mat_ptr, 
+		const std::shared_ptr<environment>& env_ptr) const;
 private:
 	GLuint vbo_{};
 	GLuint vao_{};

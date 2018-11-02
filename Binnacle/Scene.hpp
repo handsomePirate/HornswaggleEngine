@@ -118,69 +118,6 @@ private:
 	glm::vec3 position_;
 };
 
-struct environment
-{
-	explicit environment(camera& cam);
-	camera& get_camera();
-
-	template <class ... T>
-	void add_lights(light& first, T&&... args);
-	static void add_lights() {}
-
-	template <class ... T>
-	void set_lights(T&&... args);
-
-	const std::vector<glm::vec3>& get_light_positions() const;
-	const std::vector<glm::vec3>& get_light_colors() const;
-	const std::vector<float>& get_light_diffuse_intensities() const;
-	const std::vector<float>& get_light_specular_intensities() const;
-
-	void set_environment_map(GLuint id);
-	bool has_env_map() const;
-
-	void shader_load_env_map(GLuint program) const;
-	bool changed() const;
-	void unset_changed();
-
-private:
-	std::vector<glm::vec3> light_positions_;
-	std::vector<glm::vec3> light_colors_;
-	std::vector<float> light_diffuse_intensities_;
-	std::vector<float> light_specular_intensities_;
-	camera camera_;
-
-	bool has_environment_map_ = false;
-	GLuint environment_map_;
-
-	bool changed_ = true;
-};
-
-template <class ... T>
-void environment::add_lights(light& first, T&&... args)
-{
-	light_positions_.push_back(first.get_position());
-	light_colors_.push_back(first.get_color());
-	light_diffuse_intensities_.push_back(first.get_diffuse_intensity());
-	light_specular_intensities_.push_back(first.get_specular_intensity());
-	
-	add_lights(std::forward<T>(args)...);
-}
-
-template <class ... T>
-void environment::set_lights(T&&... args)
-{
-	if (!light_positions_.empty())
-		light_positions_.clear();
-	if (!light_colors_.empty())
-		light_colors_.clear();
-	if (!light_diffuse_intensities_.empty())
-		light_diffuse_intensities_.clear();
-	if (!light_specular_intensities_.empty())
-		light_specular_intensities_.clear();
-	
-	add_lights(std::forward<T>(args)...);
-}
-
 struct vertex
 {
 	vertex()
@@ -207,6 +144,12 @@ struct vertex
 	const glm::vec4& get_position() const
 	{
 		return position_;
+	}
+	void translate(const float dx, const float dy, const float dz)
+	{
+		position_.x += dx;
+		position_.y += dy;
+		position_.z += dz;
 	}
 	const glm::vec3& get_normal() const
 	{
@@ -280,6 +223,7 @@ struct model
 	model() = default;
 	model(const std::string& filename_model, bool smooth, int mat_id); // TODO: move scene loading to another project
 	// TODO: optimize loading (only this model needs to be considered, not other models)
+	model(const std::vector<vertex>& vertices, const std::vector<unsigned int>& indices);
 
 	unsigned int get_vertex_count() const;
 	unsigned int get_index_count() const;
@@ -310,8 +254,76 @@ private:
 	std::vector<vertex> vertices_;
 	std::vector<unsigned int> indices_;
 
-	int material_id_;
+	int material_id_{};
 };
+
+struct environment
+{
+	explicit environment(camera& cam, GLuint program);
+	camera& get_camera();
+
+	template <class ... T>
+	void add_lights(light& first, T&&... args);
+	static void add_lights() {}
+
+	template <class ... T>
+	void set_lights(T&&... args);
+
+	const std::vector<glm::vec3>& get_light_positions() const;
+	const std::vector<glm::vec3>& get_light_colors() const;
+	const std::vector<float>& get_light_diffuse_intensities() const;
+	const std::vector<float>& get_light_specular_intensities() const;
+
+	void set_environment_map(GLuint id);
+	bool has_env_map() const;
+
+	void shader_load_env_map(GLuint program) const;
+	bool changed() const;
+	void unset_changed();
+
+	model& get_environment_cube();
+	GLuint get_shader_program() const;
+private:
+	std::vector<glm::vec3> light_positions_;
+	std::vector<glm::vec3> light_colors_;
+	std::vector<float> light_diffuse_intensities_;
+	std::vector<float> light_specular_intensities_;
+	camera camera_;
+
+	bool has_environment_map_ = false;
+	GLuint environment_map_;
+
+	model cube_;
+	GLuint cube_program_;
+
+	bool changed_ = true;
+};
+
+template <class ... T>
+void environment::add_lights(light& first, T&&... args)
+{
+	light_positions_.push_back(first.get_position());
+	light_colors_.push_back(first.get_color());
+	light_diffuse_intensities_.push_back(first.get_diffuse_intensity());
+	light_specular_intensities_.push_back(first.get_specular_intensity());
+
+	add_lights(std::forward<T>(args)...);
+}
+
+template <class ... T>
+void environment::set_lights(T&&... args)
+{
+	if (!light_positions_.empty())
+		light_positions_.clear();
+	if (!light_colors_.empty())
+		light_colors_.clear();
+	if (!light_diffuse_intensities_.empty())
+		light_diffuse_intensities_.clear();
+	if (!light_specular_intensities_.empty())
+		light_specular_intensities_.clear();
+
+	add_lights(std::forward<T>(args)...);
+}
 
 struct model_instance
 {

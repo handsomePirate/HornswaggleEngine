@@ -95,9 +95,9 @@ private:
 	void init_scene();
 
 	template<class ...T>
-	void init_environment(camera&& cam, T&&... args);
+	void init_environment(camera&& cam, GLuint program, T&&... args);
 	template<class ...T>
-	void init_environment(T&&... args);
+	void init_environment(GLuint program, T&&... args);
 
 	float get_fps();
 
@@ -165,16 +165,16 @@ private:
 };
 
 template <class ... T>
-void render_manager::init_environment(camera&& cam, T&&... args)
+void render_manager::init_environment(camera&& cam, GLuint program, T&&... args)
 {
-	env_ptr_ = std::make_shared<environment>(cam);
+	env_ptr_ = std::make_shared<environment>(cam, program);
 	env_ptr_->set_lights(std::forward<T>(args)...);
 }
 
 template <class ... T>
-void render_manager::init_environment(T&&... args)
+void render_manager::init_environment(GLuint program, T&&... args)
 {
-	env_ptr_ = std::make_shared<environment>(camera());
+	env_ptr_ = std::make_shared<environment>(camera(), program);
 	env_ptr_->set_lights(std::forward<T>(args)...);
 }
 

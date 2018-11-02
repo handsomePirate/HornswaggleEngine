@@ -30,41 +30,35 @@ camera::camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, const fl
 
 void camera::rotate(const glm::vec3& axis, const float angle)
 {
-	if (angle == 0)
+	rotate(axis.x, axis.y, axis.z, angle);
+}
+
+void camera::rotate(const float x, const float y, const float z, const float angle)
+{
+	if (x == 0 && y == 0 && z == 0 || angle == 0)
 		return;
 
-	const auto rotation = glm::rotate(glm::quat(1.0f, 0.0f, 0.0f, 0.0f), angle, axis);
+	const auto rotation = glm::rotate(glm::quat(1.0f, 0.0f, 0.0f, 0.0f), angle, glm::vec3(x, y, z));
 
 	focus_ = rotation * (glm::vec4(focus_, 1.0f) - position_) + position_;
 	up_ = rotation * glm::vec4(up_, 1.0f);
 }
 
-void camera::rotate(const float x, const float y, const float z, const float angle)
-{
-	rotate(glm::vec3(x, y, z), angle);
-}
-
 void camera::rotate_local(const glm::vec3& axis, const float angle)
 {
-	const glm::vec3 new_axis = get_local_to_global_matrix() * glm::vec4(axis, 1.0f);
-
-	rotate(new_axis, angle);
+	rotate_local(axis.x, axis.y, axis.z, angle);
 }
 
 void camera::rotate_local(const float x, const float y, const float z, const float angle)
 {
-	rotate_local(glm::vec3(x, y, z), angle);
+	const glm::vec3 new_axis = get_local_to_global_matrix() * glm::vec4(x, y, z, 1.0f);
+
+	rotate(new_axis, angle);
 }
 
 void camera::translate(const glm::vec3& offset)
 {
-	focus_.x += offset.x;
-	focus_.y += offset.y;
-	focus_.z += offset.z;
-
-	position_.x += offset.x;
-	position_.y += offset.y;
-	position_.z += offset.z;
+	translate(offset.x, offset.y, offset.z);
 }
 
 void camera::translate(const float dx, const float dy, const float dz)
@@ -80,30 +74,30 @@ void camera::translate(const float dx, const float dy, const float dz)
 
 void camera::translate_local(const glm::vec3& offset)
 {
-	const glm::vec3 new_offset = get_local_to_global_matrix() * glm::vec4(offset, 1.0f);
-
-	translate(new_offset);
+	translate_local(offset.x, offset.y, offset.z);
 }
 
 void camera::translate_local(const float dx, const float dy, const float dz)
 {
-	translate_local(glm::vec3(dx, dy, dz));
-}
-
-void camera::translate_local_2_d(const glm::vec3& offset)
-{
-	if (offset.x == 0 && offset.y == 0 && offset.z == 0)
-		return;
-	glm::vec3 new_offset = get_local_to_global_matrix() * glm::vec4(offset, 1.0f);
-	new_offset.y = 0.0f;
-	new_offset = normalize(new_offset) * length(offset);
+	const glm::vec3 new_offset = get_local_to_global_matrix() * glm::vec4(dx, dy, dz, 1.0f);
 
 	translate(new_offset);
 }
 
+void camera::translate_local_2_d(const glm::vec3& offset)
+{
+	translate_local_2_d(offset.x, offset.y, offset.z);
+}
+
 void camera::translate_local_2_d(const float dx, const float dy, const float dz)
 {
-	translate_local_2_d(glm::vec3(dx, dy, dz));
+	if (dx == 0 && dy == 0 && dz == 0)
+		return;
+	glm::vec3 new_offset = get_local_to_global_matrix() * glm::vec4(dx, dy, dz, 1.0f);
+	new_offset.y = 0.0f;
+	new_offset = normalize(new_offset) * sqrt(dx * dx + dy * dy + dz * dz);
+
+	translate(new_offset);
 }
 
 glm::mat4 camera::get_local_to_global_matrix() const
@@ -361,9 +355,35 @@ float light::get_specular_intensity() const
 	return specular_intensity_;
 }
 
-environment::environment(camera& cam)
-	: camera_(cam), environment_map_(0)
+environment::environment(camera& cam, const GLuint program)
+	: camera_(cam), environment_map_(0), cube_program_(program)
 {
+	std::vector<vertex> vertices(8);
+	std::vector<unsigned int> indices(36);
+
+	vertices[0] = vertex(glm::vec4(-.5f, -.5f, .5f, 1), normalize(glm::vec3(.5f, .5f, -.5f)));
+	vertices[1] = vertex(glm::vec4(.5f, -.5f, .5f, 1), normalize(glm::vec3(-.5f, .5f, -.5f)));
+	vertices[2] = vertex(glm::vec4(.5f, -.5f, -.5f, 1), normalize(glm::vec3(-.5f, .5f, .5f)));
+	vertices[3] = vertex(glm::vec4(-.5f, -.5f, -.5f, 1), normalize(glm::vec3(.5f, .5f, .5f)));
+	vertices[4] = vertex(glm::vec4(-.5f, .5f, .5f, 1), normalize(glm::vec3(.5f, -.5f, -.5f)));
+	vertices[5] = vertex(glm::vec4(.5f, .5f, .5f, 1), normalize(glm::vec3(-.5f, -.5f, -.5f)));
+	vertices[6] = vertex(glm::vec4(.5f, .5f, -.5f, 1), normalize(glm::vec3(-.5f, -.5f, .5f)));
+	vertices[7] = vertex(glm::vec4(-.5f, .5f, -.5f, 1), normalize(glm::vec3(.5f, -.5f, .5f)));
+
+	indices[0] = 4; indices[1] = 3; indices[2] = 7;
+	indices[3] = 3; indices[4] = 4; indices[5] = 0;
+	indices[6] = 5; indices[7] = 0; indices[8] = 4;
+	indices[9] = 0; indices[10] = 5; indices[11] = 1;
+	indices[12] = 6; indices[13] = 1; indices[14] = 5;
+	indices[15] = 1; indices[16] = 6; indices[17] = 2;
+	indices[18] = 7; indices[19] = 2; indices[20] = 6;
+	indices[21] = 2; indices[22] = 7; indices[23] = 3;
+	indices[24] = 1; indices[25] = 3; indices[26] = 0;
+	indices[27] = 3; indices[28] = 1; indices[29] = 2;
+	indices[30] = 7; indices[31] = 5; indices[32] = 4;
+	indices[33] = 5; indices[34] = 7; indices[35] = 6;
+
+	cube_ = model(vertices, indices);
 }
 
 camera& environment::get_camera()
@@ -419,6 +439,16 @@ bool environment::changed() const
 void environment::unset_changed()
 {
 	changed_ = false;
+}
+
+model& environment::get_environment_cube()
+{
+	return cube_;
+}
+
+GLuint environment::get_shader_program() const
+{
+	return cube_program_;
 }
 
 #define DEBUG_LIMIT_INDICES_ 3
@@ -603,6 +633,12 @@ model::model(const std::string& filename_model, const bool smooth, const int mat
 	vertex_count_ = DEBUG_LIMIT_INDICES;
 	index_count_ = DEBUG_LIMIT_INDICES;
 #endif
+}
+
+model::model(const std::vector<vertex>& vertices, const std::vector<unsigned>& indices)
+{
+	vertices_ = vertices;
+	indices_ = indices;
 }
 
 model_instance::~model_instance()
