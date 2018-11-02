@@ -45,6 +45,7 @@ void renderer::render(const std::shared_ptr<scene>& scn_ptr,
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vio_);
 
+	// Render background environment map
 	if (env_ptr->has_env_map())
 	{
 		glUseProgram(env_ptr->get_shader_program());

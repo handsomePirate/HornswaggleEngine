@@ -4,6 +4,8 @@
 #include "RenderManager.hpp"
 #include <SOIL/SOIL.h>
 #include "MathHelper.hpp"
+#include <windows.h>
+#include <thread>
 
 int main(int argc, char **argv)
 {
@@ -134,6 +136,9 @@ int main(int argc, char **argv)
 			//handle.rotate(1, 0, 0, angle / 360.0f * PI * time_elapsed);
 		}
 		rm.render();
+		// Stabilize the framerate somewhat
+		if (time_elapsed < 0.0166666667f)
+			Sleep((0.0166666667f - time_elapsed) * 1000);
 	}
 
 	return 0;
