@@ -7,7 +7,6 @@ layout(location = 3) in vec2 vertexCoords;
 layout(location = 4) in vec3 tangent;
 
 out vec3 color;
-flat out vec3 norm;
 out vec3 varNorm;
 out vec3 tang;
 out vec4 position;
@@ -20,7 +19,6 @@ void main(void)
 {
 	// Setting up parameters for fragment shader
 	color = vertexColor;
-	norm = normal;
 	varNorm = normal;
 
 	tang = tangent;

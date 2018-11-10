@@ -47,11 +47,6 @@ float rand()
 {
 	last = abs(468463 * int(last) + 11251) % 1654897;//2147483647
     return last / 1654897.0;
-
-    //int n = (last << 13) ^ last;
-	//last = (n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff;
-	//float res = 1.0 - float(last) / 1073741824.0;
-    //return res;
 }
 
 vec3 sample_halfvector_GGX()

@@ -241,12 +241,12 @@ int render_manager::load_model(const std::string& filename_model, const bool smo
 	return id;
 }
 
-int render_manager::load_model_data(vertex *vertices, const size_t vertex_count, unsigned int *indices, const size_t index_count, const int mat_id)
+int render_manager::load_model_data(const std::vector<vertex>& vertices, const std::vector<unsigned int>& indices, const int mat_id)
 {
-	//scn_ptr_->load_model_data(vertices, vertex_count, indices, index_count, mat_id);
-	//vertex_count_ += vertex_count;
-	//poly_count_ += index_count / 3;
-	return 0;
+	ASSIGN_FREE_ID(mod_free_ids_, mod_next_free_id_);
+	(*mod_ptr_)[id] = model(vertices, indices, mat_id);
+
+	return id;
 }
 
 int render_manager::load_model_data(float* vertex_positions, const size_t vertex_count, unsigned int* indices,

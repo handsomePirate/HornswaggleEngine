@@ -55,7 +55,7 @@ struct render_manager
 
 	// Load an OBJ model from a file (returns its assigned id)
 	int load_model(const std::string& filename_model, bool smooth, int mat_id = -1);
-	int load_model_data(vertex *vertices, size_t vertex_count, unsigned int *indices, size_t index_count, int mat_id = -1);
+	int load_model_data(const std::vector<vertex>& vertices, const std::vector<unsigned int>& indices, int mat_id = -1);
 	int load_model_data(float *vertex_positions, size_t vertex_count, unsigned int* indices, size_t index_count, int mat_id = -1);
 	// Delete a model identified by its id
 	void delete_model(int index);
@@ -191,5 +191,3 @@ void render_manager::set_lights(T&&... args)
 	if (env_ptr_)
 		env_ptr_->set_lights(std::forward<T>(args)...);
 }
-
-static render_manager *rm;

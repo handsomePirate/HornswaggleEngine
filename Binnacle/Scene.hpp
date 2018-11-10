@@ -223,7 +223,7 @@ struct model
 	model() = default;
 	model(const std::string& filename_model, bool smooth, int mat_id); // TODO: move scene loading to another project
 	// TODO: optimize loading (only this model needs to be considered, not other models)
-	model(const std::vector<vertex>& vertices, const std::vector<unsigned int>& indices);
+	model(const std::vector<vertex>& vertices, const std::vector<unsigned int>& indices, int mat_id = -1);
 
 	unsigned int get_vertex_count() const;
 	unsigned int get_index_count() const;

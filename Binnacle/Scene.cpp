@@ -3,7 +3,6 @@
 #include "Scene.hpp"
 #include "MathHelper.hpp"
 
-#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <iostream>
@@ -635,10 +634,11 @@ model::model(const std::string& filename_model, const bool smooth, const int mat
 #endif
 }
 
-model::model(const std::vector<vertex>& vertices, const std::vector<unsigned>& indices)
+model::model(const std::vector<vertex>& vertices, const std::vector<unsigned>& indices, const int mat_id)
 {
 	vertices_ = vertices;
 	indices_ = indices;
+	material_id_ = mat_id;
 }
 
 model_instance::~model_instance()
