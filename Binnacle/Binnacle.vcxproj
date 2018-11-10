@@ -158,6 +158,7 @@
     <ClInclude Include="Texture.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="fragment_brdf_example.glsl" />
     <None Include="fragment_env_cube.glsl" />
     <None Include="fragment_brdf.glsl" />
     <None Include="fragment_phong.glsl" />

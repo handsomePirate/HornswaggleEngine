@@ -41,5 +41,5 @@ layout(location = 0) out vec4 fragColor;
 
 void main(void)
 {
-	fragColor = vec4(textureCube(cubemap, -varNorm.xyz));
+	fragColor = vec4(textureCube(cubemap, -varNorm));
 }

@@ -9,9 +9,9 @@ layout(location = 4) in vec3 tangent;
 out vec3 color;
 flat out vec3 norm;
 out vec3 varNorm;
+out vec3 tang;
 out vec4 position;
 out vec2 coords;
-out mat3 TBN;
 
 uniform mat4 projectionViewMatrix;
 uniform vec3 camera;
@@ -23,8 +23,7 @@ void main(void)
 	norm = normal;
 	varNorm = normal;
 
-	vec3 bitangent = cross(normal, tangent);
-	TBN = mat3(tangent, bitangent, normal);
+	tang = tangent;
 	
 	// Determining vertex position
 	gl_Position = projectionViewMatrix * vertexPosition; 

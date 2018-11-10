@@ -85,5 +85,8 @@
     <None Include="fragment_env_cube.glsl">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="fragment_brdf_example.glsl">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

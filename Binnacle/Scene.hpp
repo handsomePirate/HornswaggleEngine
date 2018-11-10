@@ -250,6 +250,7 @@ private:
 	static bool compare_vertices(const vertex& v1, const vertex& v2);
 
 	static glm::vec3 compute_tangent(const glm::vec3& edge1, const glm::vec3& edge2, const glm::vec2& delta_uv1, const glm::vec2& delta_uv2);
+	static glm::vec3 compute_tangent(const glm::vec3& normal);
 
 	std::vector<vertex> vertices_;
 	std::vector<unsigned int> indices_;

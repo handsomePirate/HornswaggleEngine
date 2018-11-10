@@ -2,6 +2,8 @@
 #include <glm/detail/type_vec3.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#define FRAMERATE_STEP 1 / 60.0f
+
 struct model_instance;
 
 // This structure is used to enable the users of the render manager to transform the model instances in use

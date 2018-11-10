@@ -264,13 +264,15 @@ void material::update()
 	glUniform3fv(mat_color_loc, 1, &color_[0]);
 
 	const auto mat_specular_color_loc = glGetUniformLocation(program_, "material.specular_color");
+	specular_color_ = glm::vec3(1, 1, 1);
 	glUniform3fv(mat_specular_color_loc, 1, &specular_color_[0]);
 
 	const float ka = 0.2f;
 	const float kd = 1.0f;
 	const float ks = 0.2f;
 
-	const float shininess = 15;
+	const float roughness = 0.0f;
+	const float metalness = 1;
 
 	const auto ka_loc = glGetUniformLocation(program_, "material.ambience_c");
 	glUniform1f(ka_loc, ka);
@@ -281,8 +283,11 @@ void material::update()
 	const auto ks_loc = glGetUniformLocation(program_, "material.specular_c");
 	glUniform1f(ks_loc, ks);
 
-	const auto shininess_loc = glGetUniformLocation(program_, "material.shininess");
-	glUniform1f(shininess_loc, shininess);
+	const auto roughness_loc = glGetUniformLocation(program_, "material.roughness");
+	glUniform1f(roughness_loc, roughness);
+
+	const auto metalness_loc = glGetUniformLocation(program_, "material.metalness");
+	glUniform1f(metalness_loc, metalness);
 
 	// The texture samplers
 	const auto diffuse_map_loc = glGetUniformLocation(program_, "diffuseMap");

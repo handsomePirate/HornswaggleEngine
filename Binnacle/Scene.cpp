@@ -578,13 +578,13 @@ model::model(const std::string& filename_model, const bool smooth, const int mat
 					{
 						if (smooth)
 						{
-							process_vertex(vertices_, positions[first_i - 1], normals[first_n - 1], glm::vec2(), glm::vec3(), first_i - 1, indices_, index_hash);
-							process_vertex(vertices_, positions[second_i - 1], normals[second_n - 1], glm::vec2(), glm::vec3(), second_i - 1, indices_, index_hash);
-							process_vertex(vertices_, positions[third_i - 1], normals[third_n - 1], glm::vec2(), glm::vec3(), third_i - 1, indices_, index_hash);
+							process_vertex(vertices_, positions[first_i - 1], normals[first_n - 1], glm::vec2(), compute_tangent(normals[first_n - 1]), first_i - 1, indices_, index_hash);
+							process_vertex(vertices_, positions[second_i - 1], normals[second_n - 1], glm::vec2(), compute_tangent(normals[second_n - 1]), second_i - 1, indices_, index_hash);
+							process_vertex(vertices_, positions[third_i - 1], normals[third_n - 1], glm::vec2(), compute_tangent(normals[third_n - 1]), third_i - 1, indices_, index_hash);
 						}
 						else
 						{
-							emplace_vertex(vertices_, vertex(positions[first_i - 1], normals[first_n - 1]), indices_);
+							emplace_vertex(vertices_, vertex(positions[first_i - 1], normals[first_n - 1]), indices_); // TODO: add tangent
 							emplace_vertex(vertices_, vertex(positions[second_i - 1], normals[second_n - 1]), indices_);
 							emplace_vertex(vertices_, vertex(positions[third_i - 1], normals[third_n - 1]), indices_);
 						}
@@ -925,17 +925,15 @@ void model::process_vertex(std::vector<vertex>& vertices, const glm::vec4& pos, 
 		{
 			const int match_index = find_match(vertices, index_hash[hash][id].second, v);
 
+			interpolate_normals(vertices, index_hash[hash][id].second, index_hash[hash][id].first, v);
+			++index_hash[hash][id].first;
 			if (match_index == -1)
 			{
-				interpolate_normals(vertices, index_hash[hash][id].second, index_hash[hash][id].first, v);
-				++index_hash[hash][id].first;
 				const auto index = emplace_vertex(vertices, v, indices); // TODO: interpolate the entire vector and change you normal too
 				index_hash[hash][id].second.push_back(index);
 			}
 			else
 			{
-				interpolate_normals(vertices, index_hash[hash][id].second, index_hash[hash][id].first, v);
-				++index_hash[hash][id].first;
 				indices.push_back(index_hash[hash][id].second[match_index]); // TODO: add weight to normal
 			}
 		}
@@ -979,9 +977,13 @@ void model::interpolate_normals(std::vector<vertex>& vertices, std::vector<unsig
 
 	v.set_normal(new_norm);
 
+	const auto new_tang = compute_tangent(new_norm);
+	v.set_tangent(new_tang);
+
 	for (auto && i : indices)
 	{
 		vertices[i].set_normal(new_norm);
+		vertices[i].set_tangent(new_tang);
 	}
 }
 
@@ -1018,6 +1020,15 @@ glm::vec3 model::compute_tangent(const glm::vec3& edge1, const glm::vec3& edge2,
 	tangent.y = f * (delta_uv2.y * edge1.y - delta_uv1.y * edge2.y);
 	tangent.z = f * (delta_uv2.y * edge1.z - delta_uv1.y * edge2.z);
 	return normalize(tangent);
+}
+
+glm::vec3 model::compute_tangent(const glm::vec3& normal)
+{
+	if (normal.x == 0 && normal.z == 0)
+		return glm::vec3(1, 0, 0);
+	float a = normal.z / sqrt(normal.z * normal.z + normal.x * normal.x);
+	float b = -normal.x / sqrt(normal.z * normal.z + normal.x * normal.x);
+	return glm::vec3(a, 0, b);
 }
 
 scene::scene()

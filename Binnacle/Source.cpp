@@ -60,14 +60,14 @@ int main(int argc, char **argv)
 
 	rm.init_renderer();
 
-	rm.set_lights(light(glm::vec3(1.0f, 0.1f, 4.0f), glm::vec3(1.0f, 1.0f, 1.0f), 40, 60),
-		light(glm::vec3(3.0f, 0.8f, -0.1f), glm::vec3(0.75f, 0.75f, 1.0f), 40, 50));
+	rm.set_lights(light(glm::vec3(1.0f, 0.1f, 9.0f), glm::vec3(1.0f, 1.0f, 1.0f), 40, 60),
+		light(glm::vec3(-3.0f, 0.8f, 15), glm::vec3(0.75f, 0, 1.0f), 40, 50));
 	rm.set_camera(glm::vec3(), glm::vec3(), glm::vec3(), 45, rm.get_aspect_ratio(), 0.1, 100);
 	
 	const auto shader_program_id = rm.create_shader_program("vertex.glsl", "fragment_brdf.glsl");
 	const auto mat_id_tex = rm.create_material(shader_program_id, "leather_a.png", "leather_nr.png");
-	const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(0.06f, 0.3f, 0.9f));
-	//const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(1.0f, 1.0f, 1.0f));
+	//const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(0.06f, 0.3f, 0.9f));
+	const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(1.0f, 0.0f, 0.0f));
 
 	const auto model = rm.load_model("Human_body.obj", true, mat_id_notex);
 
@@ -137,8 +137,8 @@ int main(int argc, char **argv)
 		}
 		rm.render();
 		// Stabilize the framerate somewhat
-		if (time_elapsed < 0.0166666667f)
-			Sleep((0.0166666667f - time_elapsed) * 1000);
+		if (time_elapsed < FRAMERATE_STEP)
+			Sleep((FRAMERATE_STEP - time_elapsed) * 1000);
 	}
 
 	return 0;
