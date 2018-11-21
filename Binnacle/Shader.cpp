@@ -271,7 +271,7 @@ void material::update()
 	const float kd = 1.0f;
 	const float ks = 0.2f;
 
-	const float roughness = 0.05f;
+	const float roughness = 0.0f;
 	const float metalness = 1;
 
 	const auto ka_loc = glGetUniformLocation(program_, "material.ambience_c");

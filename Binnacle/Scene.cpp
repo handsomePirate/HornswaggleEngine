@@ -457,6 +457,12 @@ model::model(const std::string& filename_model, const bool smooth, const int mat
 {
 	std::ifstream ifs(filename_model);
 
+	if (!ifs.good() || !ifs.is_open())
+	{
+		std::cout << "Cannot open model file " << filename_model << "!" << std::endl;
+		return;
+	}
+
 	std::string line;
 	std::string sign;
 

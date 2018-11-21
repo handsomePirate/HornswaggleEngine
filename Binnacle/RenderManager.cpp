@@ -122,10 +122,15 @@ int render_manager::create_shader_program(const std::string& vertex_shader_file,
 {
 	auto shp = shader_program();
 
-	shp.load_shader(VERTEX, vertex_shader_file);
-	shp.load_shader(FRAGMENT, fragment_shader_file);
+	if (!shp.load_shader(VERTEX, vertex_shader_file))
+		std::cout << "Cannot open or read from " << vertex_shader_file << "!" << std::endl;
+	if (!shp.load_shader(FRAGMENT, fragment_shader_file))
+		std::cout << "Cannot open or read from " << fragment_shader_file << "!" << std::endl;
 	if (!geometry_shader_file.empty())
-		shp.load_shader(GEOMETRY, geometry_shader_file);
+	{
+		if (!shp.load_shader(GEOMETRY, geometry_shader_file))
+			std::cout << "Cannot open or read from " << geometry_shader_file << "!" << std::endl;
+	}
 
 	if (!shp.compile_and_link_shaders())
 	{

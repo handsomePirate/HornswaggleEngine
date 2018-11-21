@@ -41,7 +41,7 @@ layout(location = 0) out vec4 fragColor;
 
 const float PI = 3.14159265358979323846;
 
-float last = (pow(position.x, 2) * 4919 + pow(position.z, 2) * 8737 + pow(position.y, 2) * 6911) * 9883;
+float last = (pow(varNorm.x, 2) * 4919 + pow(varNorm.z, 2) * 8737 + pow(varNorm.y, 2) * 6911) * 9883;
 
 float rand()
 {
@@ -108,10 +108,10 @@ vec4 brdf(vec3 wi, vec3 wo, vec3 h, vec3 n, vec3 h_t)
 
 	vec3 reflectance = F * D * G / abs(n_v * n_l * 4);
 
-	fragColor = vec4(D, D, D, 1);
+	//fragColor = vec4(D, D, D, 1);
 	//fragColor = vec4(G, G, G, 1);
 	//fragColor = vec4(F, 1);
-	//fragColor = vec4((D * G * F).x == 0,(D * G * F).y == 0,(D * G * F).z == 0, 1);
+	//fragColor = vec4(G * F, 1);
 
 	return vec4(reflectance * material.specular_color, D);
 }

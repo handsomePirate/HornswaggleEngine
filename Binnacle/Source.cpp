@@ -9,6 +9,7 @@
 #include <glm/gtx/norm.hpp>
 
 #define KKAPP
+#undef KKAPP
 
 #ifndef KKAPP
 int main(int argc, char **argv)
@@ -73,7 +74,7 @@ int main(int argc, char **argv)
 	//const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(0.06f, 0.3f, 0.9f));
 	const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(1.0f, 0.0f, 0.0f));
 
-	const auto model = rm.load_model("32k_v_sphere.obj", true, mat_id_notex);
+	const auto model = rm.load_model("Human_body.obj", true, mat_id_notex);
 
 	const int instance_count = 4;
 	std::vector<instance_handle> handles;
