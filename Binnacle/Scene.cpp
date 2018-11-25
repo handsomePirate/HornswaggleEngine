@@ -331,8 +331,8 @@ void camera::create_view_matrix()
 	view_matrix_ = lookAt(glm::vec3(position_), focus_, up_);
 }
 
-light::light(const glm::vec3& position, const glm::vec3& color, const float diffuse_intensity, const float specular_intensity)
-	: specular_intensity_(specular_intensity), diffuse_intensity_(diffuse_intensity), color_(color), position_(position) {}
+light::light(const glm::vec3& position, const glm::vec3& color, const float intensity)
+	: intensity_(intensity), color_(color), position_(position) {}
 
 const glm::vec3& light::get_position() const
 {
@@ -344,18 +344,13 @@ const glm::vec3& light::get_color() const
 	return color_;
 }
 
-float light::get_diffuse_intensity() const
+float light::get_intensity() const
 {
-	return diffuse_intensity_;
+	return intensity_;
 }
 
-float light::get_specular_intensity() const
-{
-	return specular_intensity_;
-}
-
-environment::environment(camera& cam, const GLuint program)
-	: camera_(cam), environment_map_(0), cube_program_(program)
+environment::environment(camera& cam, const GLuint env_cube_program, const GLuint lights_program)
+	: camera_(cam), environment_map_(0), cube_program_(env_cube_program), lights_program_(lights_program)
 {
 	std::vector<vertex> vertices(8);
 	std::vector<unsigned int> indices(36);
@@ -400,25 +395,19 @@ const std::vector<glm::vec3>& environment::get_light_colors() const
 	return light_colors_;
 }
 
-const std::vector<float>& environment::get_light_diffuse_intensities() const
+const std::vector<float>& environment::get_light_intensities() const
 {
-	return light_diffuse_intensities_;
+	return light_intensities_;
 }
 
-const std::vector<float>& environment::get_light_specular_intensities() const
+const std::vector<vertex>& environment::get_light_visuals() const
 {
-	return light_specular_intensities_;
+	return light_visuals_;
 }
 
 void environment::set_environment_map(const GLuint id)
 {
 	environment_map_ = id;
-	has_environment_map_ = true;
-}
-
-bool environment::has_env_map() const
-{
-	return has_environment_map_;
 }
 
 void environment::shader_load_env_map(const GLuint program) const
@@ -445,9 +434,14 @@ model& environment::get_environment_cube()
 	return cube_;
 }
 
-GLuint environment::get_shader_program() const
+GLuint environment::get_cube_shader_program() const
 {
 	return cube_program_;
+}
+
+GLuint environment::get_lights_shader_program() const
+{
+	return lights_program_;
 }
 
 #define DEBUG_LIMIT_INDICES_ 3

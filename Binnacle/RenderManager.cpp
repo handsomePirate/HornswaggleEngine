@@ -95,6 +95,7 @@ render_manager::render_manager(const bool fullscreen, int samples, const int maj
 
 	glCullFace(GL_BACK);
 	glEnable(GL_CULL_FACE);
+	glEnable(GL_PROGRAM_POINT_SIZE);
 
 	if (window_visible)
 		glfwShowWindow(window_);
@@ -121,6 +122,11 @@ int render_manager::create_shader_program(const std::string& vertex_shader_file,
 	const std::string& fragment_shader_file, const std::string& geometry_shader_file) const
 {
 	auto shp = shader_program();
+
+	std::cout << "Shaders: " << vertex_shader_file << ", " << fragment_shader_file;
+	if (geometry_shader_file.empty())
+		std::cout << ", " << geometry_shader_file;
+	std::cout << std::endl;
 
 	if (!shp.load_shader(VERTEX, vertex_shader_file))
 		std::cout << "Cannot open or read from " << vertex_shader_file << "!" << std::endl;
@@ -155,8 +161,23 @@ void render_manager::init_renderer()
 		mod_ptr_ = std::make_unique<std::map<int, model>>();
 		ins_ptr_ = std::make_unique<std::map<int, std::vector<int>>>();
 		init_scene();
-		init_environment(create_shader_program("vertex.glsl", "fragment_env_cube.glsl"));
+		init_environment(create_shader_program("vertex.glsl", "fragment_env_cube.glsl"), create_shader_program("vertex_lights.glsl", "fragment_lights.glsl"));
 	}
+}
+
+void render_manager::renderer_enable(const vizualization& option) const
+{
+	rnd_ptr_->enable(option);
+}
+
+void render_manager::renderer_disable(const vizualization& option) const
+{
+	rnd_ptr_->disable(option);
+}
+
+bool render_manager::renderer_is_enabled(const vizualization& option) const
+{
+	return rnd_ptr_->is_enabled(option);
 }
 
 void render_manager::init_texture_rendering(const int width, const int height)
@@ -400,7 +421,8 @@ void render_manager::load_environment_cube_map(const std::string& neg_z, const s
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	env_ptr_->set_environment_map(tex_id);
-	//glUseProgram(env_ptr_->get_shader_program());
+	rnd_ptr_->enable(vizualization::ENVIRONMENT_MAP);
+	//glUseProgram(env_ptr_->get_cube_shader_program());
 	//glActiveTexture(GL_TEXTURE31);
 	//glBindTexture(GL_TEXTURE_CUBE_MAP, tex_id);
 

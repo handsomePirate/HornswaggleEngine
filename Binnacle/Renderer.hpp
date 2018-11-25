@@ -6,6 +6,18 @@
 #include "Scene.hpp"
 #include "Shader.hpp"
 
+enum class buffer_attrib
+{
+	VERTEX,
+	POINT_LIGHT
+};
+
+enum class vizualization
+{
+	LIGHTS = 0,
+	ENVIRONMENT_MAP = 1
+};
+
 // The object that takes care of rasterazing the scene
 struct renderer
 {
@@ -19,8 +31,18 @@ struct renderer
 	void render(const std::shared_ptr<scene>& scn_ptr, 
 		const std::shared_ptr<std::map<int, material>>& mat_ptr, 
 		const std::shared_ptr<environment>& env_ptr) const;
+
+	void enable(const vizualization& option) const;
+	void disable(const vizualization& option) const;
+
+	bool is_enabled(const vizualization& option) const;
+
+	void set_buffer_attrib(const buffer_attrib& option) const;
+
 private:
 	GLuint vbo_{};
 	GLuint vao_{};
 	GLuint vio_{};
+
+	bool *vizualization_options_;
 };

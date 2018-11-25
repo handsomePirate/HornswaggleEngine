@@ -85,7 +85,7 @@ void main()
         vec3 H = normalize(V + L);
         float distance    = length(lightPositions[i] - position.xyz);
         float attenuation = 1.0 / (distance * distance);
-        vec3 radiance     = lightColors[i] * attenuation;        
+        vec3 radiance     = lightColors[i] * attenuation;
         
         // cook-torrance brdf
         float NDF = DistributionGGX(N, H, material.roughness);        

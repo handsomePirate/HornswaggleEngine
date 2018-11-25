@@ -104,15 +104,13 @@ private:
 
 struct light
 {
-	light(const glm::vec3& position, const glm::vec3& color, float diffuse_intensity, float specular_intensity);
+	light(const glm::vec3& position, const glm::vec3& color, float intensity);
 
 	const glm::vec3& get_position() const;
 	const glm::vec3& get_color() const;
-	float get_diffuse_intensity() const;
-	float get_specular_intensity() const;
+	float get_intensity() const;
 private:
-	float specular_intensity_;
-	float diffuse_intensity_;
+	float intensity_;
 	glm::vec3 color_;
 
 	glm::vec3 position_;
@@ -260,7 +258,7 @@ private:
 
 struct environment
 {
-	explicit environment(camera& cam, GLuint program);
+	explicit environment(camera& cam, GLuint env_cube_program, GLuint lights_program);
 	camera& get_camera();
 
 	template <class ... T>
@@ -272,30 +270,32 @@ struct environment
 
 	const std::vector<glm::vec3>& get_light_positions() const;
 	const std::vector<glm::vec3>& get_light_colors() const;
-	const std::vector<float>& get_light_diffuse_intensities() const;
-	const std::vector<float>& get_light_specular_intensities() const;
+	const std::vector<float>& get_light_intensities() const;
+
+	const std::vector<vertex>& get_light_visuals() const;
 
 	void set_environment_map(GLuint id);
-	bool has_env_map() const;
 
 	void shader_load_env_map(GLuint program) const;
 	bool changed() const;
 	void unset_changed();
 
 	model& get_environment_cube();
-	GLuint get_shader_program() const;
+	GLuint get_cube_shader_program() const;
+	GLuint get_lights_shader_program() const;
 private:
 	std::vector<glm::vec3> light_positions_;
 	std::vector<glm::vec3> light_colors_;
-	std::vector<float> light_diffuse_intensities_;
-	std::vector<float> light_specular_intensities_;
+	std::vector<float> light_intensities_;
+
+	std::vector<vertex> light_visuals_;
 	camera camera_;
 
-	bool has_environment_map_ = false;
 	GLuint environment_map_;
 
 	model cube_;
 	GLuint cube_program_;
+	GLuint lights_program_;
 
 	bool changed_ = true;
 };
@@ -305,8 +305,8 @@ void environment::add_lights(light& first, T&&... args)
 {
 	light_positions_.push_back(first.get_position());
 	light_colors_.push_back(first.get_color());
-	light_diffuse_intensities_.push_back(first.get_diffuse_intensity());
-	light_specular_intensities_.push_back(first.get_specular_intensity());
+	light_intensities_.push_back(first.get_intensity());
+	light_visuals_.emplace_back(glm::vec4(first.get_position(), 1), glm::vec3(), first.get_color(), glm::vec2());
 
 	add_lights(std::forward<T>(args)...);
 }
@@ -318,10 +318,10 @@ void environment::set_lights(T&&... args)
 		light_positions_.clear();
 	if (!light_colors_.empty())
 		light_colors_.clear();
-	if (!light_diffuse_intensities_.empty())
-		light_diffuse_intensities_.clear();
-	if (!light_specular_intensities_.empty())
-		light_specular_intensities_.clear();
+	if (!light_intensities_.empty())
+		light_intensities_.clear();
+	if (!light_visuals_.empty())
+		light_visuals_.clear();
 
 	add_lights(std::forward<T>(args)...);
 }

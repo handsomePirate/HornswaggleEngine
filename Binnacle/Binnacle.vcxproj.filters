@@ -91,5 +91,11 @@
     <None Include="fragment_fresnel_color.glsl">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="fragment_lights.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="vertex_lights.glsl">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

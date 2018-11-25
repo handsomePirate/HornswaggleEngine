@@ -13,8 +13,8 @@ struct Material
 };
 
 in vec4 position;
-flat in vec3 norm;
-in vec3 varNorm;
+flat in vec3 flatNorm;
+in vec3 norm;
 in vec3 color;
 in vec2 coords;
 in mat3 TBN;
@@ -23,8 +23,7 @@ uniform samplerCube cubemap;
 
 uniform vec3 lightPositions[20]; // max number of lights in the scene
 uniform vec3 lightColors[20];
-uniform float lightDiffI[20];
-uniform float lightSpecI[20];
+uniform float lightIntensities[20];
 
 uniform int lightsCount;
 
@@ -41,5 +40,5 @@ layout(location = 0) out vec4 fragColor;
 
 void main(void)
 {
-	fragColor = vec4(textureCube(cubemap, -varNorm));
+	fragColor = vec4(textureCube(cubemap, -norm));
 }

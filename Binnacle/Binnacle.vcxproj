@@ -168,8 +168,10 @@
     <None Include="fragment_env_cube.glsl" />
     <None Include="fragment_brdf.glsl" />
     <None Include="fragment_fresnel_color.glsl" />
+    <None Include="fragment_lights.glsl" />
     <None Include="fragment_phong.glsl" />
     <None Include="vertex.glsl" />
+    <None Include="vertex_lights.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

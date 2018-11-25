@@ -2,8 +2,8 @@
 #extension GL_NV_shadow_samplers_cube: enable
 
 in vec4 position;
-flat in vec3 norm;
-in vec3 varNorm;
+flat in vec3 flatNorm;
+in vec3 norm;
 in vec3 tang;
 in vec3 color;
 in vec2 coords;
@@ -11,16 +11,15 @@ mat3 TBN;
 
 struct Material
 {
-  float ambience_c;
-  float diffuse_c;
-  float specular_c;
-
   float roughness;
   float metalness;
 
-  vec3 specular_color;
   vec3 color;
 };
+
+vec3 material_color;
+vec3 diffuse_color;
+vec3 specular_color;
 
 uniform sampler2D diffuseMap;
 uniform sampler2D normalMap;
@@ -28,6 +27,7 @@ uniform samplerCube cubemap;
 
 uniform vec3 lightPositions[20]; // max number of lights in the scene
 uniform vec3 lightColors[20];
+uniform float lightIntensities[20];
 
 uniform int lightsCount;
 
@@ -41,11 +41,15 @@ layout(location = 0) out vec4 fragColor;
 
 const float PI = 3.14159265358979323846;
 
-float last = (pow(varNorm.x, 2) * 4919 + pow(varNorm.z, 2) * 8737 + pow(varNorm.y, 2) * 6911) * 9883;
+
+vec3 normal;
+vec3 wi;
+
+float last = (pow(norm.x, 2) * 4919 + pow(norm.z, 2) * 8737 + pow(norm.y, 2) * 6911) * 9883;
 
 float rand()
 {
-	last = abs(468463 * int(last) + 11251) % 1654897;//2147483647
+	last = abs(468463 * int(last) + 11251) % 1654897;
     return last / 1654897.0;
 }
 
@@ -87,10 +91,10 @@ float shadowing_smith(float n_v, float n_l)
 	return shadowing_schlick(n_v) * shadowing_schlick(n_l);
 }
 
-vec4 brdf(vec3 wi, vec3 wo, vec3 h, vec3 n, vec3 h_t)
+vec4 brdf(vec3 wi, vec3 wo, float cos_theta, vec3 n, vec3 h_t)
 {
 	float roughness_2 = pow(material.roughness, 2);
-	float r = (roughness_2 - 1) * pow(h.y, 2) + 1;
+	float r = (roughness_2 - 1) * pow(cos_theta, 2) + 1;
 	float D = roughness_2 / (PI * pow(r, 2));
 	if (isnan(D))
 		D = 1;
@@ -103,34 +107,50 @@ vec4 brdf(vec3 wi, vec3 wo, vec3 h, vec3 n, vec3 h_t)
 	float n_v = abs(dot(n, wi));
 	float n_l = abs(dot(n, wo));
 	float G = shadowing_smith(n_v, n_l);
-	//fragColor = vec4(h.y, 0, 0, 1);
+	//fragColor = vec4(cos_theta, 0, 0, 1);
 	//fragColor = vec4(F, 1);
 
 	vec3 reflectance = F * D * G / abs(n_v * n_l * 4);
 
-	//fragColor = vec4(D, D, D, 1);
-	//fragColor = vec4(G, G, G, 1);
+	//fragColor = vec4(vec3(abs(D)), 1);
+	fragColor = vec4(vec3(G), 1);
 	//fragColor = vec4(F, 1);
-	//fragColor = vec4(G * F, 1);
+	//fragColor = vec4(reflectance, 1);
 
-	return vec4(reflectance * material.specular_color, D);
+	return vec4(reflectance * specular_color, D); // this might need to be f
 }
 
-vec3 normal;
-vec3 wi;
-
-float pdf(float D, vec3 h, vec3 wo)
+float pdf(float D, float cos_theta, vec3 wo)
 {
-	//float w_h = abs(dot(wo, h));
-	//float p = D / (4 * w_h);
-	//return max(p, 0.00000001);
-	return max(D * h.y, 0.00000001);
+	return max(D * cos_theta, 0.00000001);
 }
 
-vec3 sample_brdf()
+vec3 sample_specular(int k)
 {
-	wi = normalize(position.xyz - camera);
+	vec3 wo = normalize(lightPositions[k] - position.xyz);
 
+	vec3 half_normal = normalize(-wi + wo);
+	float cos_theta = max(0, dot(half_normal, normal));
+
+	vec4 res = brdf(wi, wo, cos_theta, normal, half_normal);
+	vec3 brdf_color = res.rgb;
+	//fragColor = vec4(brdf(wi, wo, cos_theta, normal, half_normal).rgb, 1);
+
+	float distance = length(lightPositions[k] - position.xyz);
+
+	return (brdf_color * lightColors[k] * dot(normal, wo) * lightIntensities[k]) / (distance * distance);
+}
+
+vec3 sample_diffuse(int k)
+{
+	vec3 wo = normalize(lightPositions[k] - position.xyz);
+	float distance = length(lightPositions[k] - position.xyz);
+	
+	return  (diffuse_color / PI * lightColors[k] * dot(normal, wo) * lightIntensities[k]) / (distance * distance);
+}
+
+vec3 sample_brdf_environment()
+{
 	vec3 half_vector = sample_halfvector_GGX();
 	vec3 half_vector_transformed = normalize(TBN * half_vector);
 	//return half_vector_transformed;
@@ -138,35 +158,41 @@ vec3 sample_brdf()
 	vec3 wo = reflect(wi, half_vector_transformed);
 	//fragColor = vec4(dot(half_vector_transformed, wi), 0, 0, 1);
 
-	vec4 res = brdf(wi, wo, half_vector, normal, half_vector_transformed);
+	vec4 res = brdf(wi, wo, half_vector.y, normal, half_vector_transformed);
 	vec3 brdf_color = res.rgb;
 	vec3 tex_color = textureCube(cubemap, wo).rgb;
 
-	return (brdf_color * tex_color * dot(normal, wo) / pdf(res.a, half_vector, wo));
+	return (brdf_color * tex_color * dot(normal, wo) / pdf(res.a, half_vector.y, wo));
 }
 
-vec3 sample_diffuse()
+vec3 sample_diffuse_environment()
 {
-	wi = normalize(position.xyz - camera);
 	vec3 half_vector = sample_uniform();
 	vec3 half_vector_transformed = normalize(TBN * half_vector);
 	vec3 wo = reflect(wi, half_vector_transformed);
 	vec3 tex_color = textureCube(cubemap, wo).rgb;
 	//return half_vector;
 	
-	return  material.color / PI * tex_color;
+	return  diffuse_color / PI * tex_color;
 }
 
 vec4 get_color(int samples)
 {
 	vec3 color;
 
+	for (int i = 0; i < lightsCount; ++i)
+	{
+		color += sample_specular(i);
+		color += sample_diffuse(i);
+	}
+
+	vec3 environment_color;
 	for (int i = 0; i < samples; ++i)
 	{
-		color += sample_brdf();
-		color += sample_diffuse();
+		environment_color += sample_brdf_environment();
+		environment_color += sample_diffuse_environment();
 	}
-	return vec4(color / samples, 1);
+	return vec4(color + environment_color / samples, 1);
 }
 
 void main(void)
@@ -174,12 +200,11 @@ void main(void)
 	//fragColor = vec4(abs(normalize(tang)), 1);
 	//return;
 
+	material_color = material.color;
+	normal = normalize(norm);
 	vec3 tangent = normalize(tang);
-	normal = normalize(varNorm);
 	vec3 bitangent = cross(normal, tangent);
-	TBN = mat3(tangent, normal, bitangent); // might need to switch normal and bitangent
-
-	vec4 diffuseColor = vec4(material.color, 1);
+	TBN = mat3(tangent, normal, bitangent);
 
 	if (useTexture)
 	{
@@ -191,23 +216,12 @@ void main(void)
 
 		normal = normalize(TBN * normal);
 
-		diffuseColor = texture(diffuseMap, coords);
+		material_color = texture(diffuseMap, coords).rgb;
 	}
+	diffuse_color = mix(material_color, vec3(0), material.metalness);
+	specular_color = mix(vec3(1), material_color, material.metalness);
 
-	//float r1 = abs(rand());
-	//float r2 = abs(rand());
-	//float theta = atan(material.roughness * sqrt(r1 / (1 - r1)));
-	//float phi = 2 * PI * r2;
-	//float x = sin(theta) * cos(phi);
-	//float z = sin(theta) * sin(phi);
-	//float y = cos(theta);
-	//
-	//rand();
-	//fragColor = vec4(rand(), 0, 0, 1);
-	//if (fragColor.x < 0 || fragColor.y < 0|| fragColor.z < 0)
-	//	fragColor = vec4(1);
-	//return;
-
+	wi = normalize(position.xyz - camera);
 	//get_color(20);
 	fragColor = get_color(20);
 }

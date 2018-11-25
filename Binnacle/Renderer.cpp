@@ -5,28 +5,17 @@
 
 renderer::renderer()
 {
+	vizualization_options_ = new bool[2]
+	{ 
+		/*LIGHTS = */false,
+		/*ENVIRONMENT_MAP = */false
+	};
+
 	glGenVertexArrays(1, &vao_);
-	glBindVertexArray(vao_);
-
 	glGenBuffers(1, &vbo_);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-
 	glGenBuffers(1, &vio_);
 
-	const auto stride = sizeof(vertex);//sizeof(glm::vec4) + sizeof(glm::vec3) * 3 + sizeof(glm::vec2);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, stride, nullptr);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void *>(sizeof(glm::vec4)));
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void *>(sizeof(glm::vec4) + sizeof(glm::vec3)));
-	glEnableVertexAttribArray(2);
-	glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void *>(sizeof(glm::vec4) + sizeof(glm::vec3) * 2));
-	glEnableVertexAttribArray(3);
-	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void *>(sizeof(glm::vec4) + sizeof(glm::vec3) * 2 + sizeof(glm::vec2)));
-	glEnableVertexAttribArray(4);
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
+	set_buffer_attrib(buffer_attrib::VERTEX);
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
@@ -46,9 +35,9 @@ void renderer::render(const std::shared_ptr<scene>& scn_ptr,
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vio_);
 
 	// Render background environment map
-	if (env_ptr->has_env_map())
+	if (env_ptr && is_enabled(vizualization::ENVIRONMENT_MAP))
 	{
-		glUseProgram(env_ptr->get_shader_program());
+		glUseProgram(env_ptr->get_cube_shader_program());
 		auto& cube_model = env_ptr->get_environment_cube();
 		vertex vertices[8];
 		const auto vertex_data = cube_model.get_vertex_data();
@@ -82,8 +71,67 @@ void renderer::render(const std::shared_ptr<scene>& scn_ptr,
 		if (!indices.empty())
 			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr); // keep in mind the unsigned int!!!
 	}
+	if (env_ptr && is_enabled(vizualization::LIGHTS))
+	{
+		glUseProgram(env_ptr->get_lights_shader_program());
+		auto& light_visuals = env_ptr->get_light_visuals();
+
+		glBufferData(GL_ARRAY_BUFFER, light_visuals.size() * sizeof(vertex), &light_visuals[0], GL_DYNAMIC_DRAW);
+		glDrawArrays(GL_POINTS, 0, light_visuals.size());
+	}
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+
+void renderer::enable(const vizualization& option) const
+{
+	vizualization_options_[static_cast<int>(option)] = true;
+}
+
+void renderer::disable(const vizualization& option) const
+{
+	vizualization_options_[static_cast<int>(option)] = false;
+}
+
+bool renderer::is_enabled(const vizualization& option) const
+{
+	return vizualization_options_[static_cast<int>(option)];
+}
+
+void renderer::set_buffer_attrib(const buffer_attrib& option) const
+{
+	glBindVertexArray(vao_);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+	unsigned stride;
+
+	switch (option)
+	{
+	default:
+		/*WARNING: this branch falls through to the next one to make the vertex attribution default*/
+	case buffer_attrib::VERTEX:
+		stride = sizeof(vertex);//sizeof(glm::vec4) + sizeof(glm::vec3) * 3 + sizeof(glm::vec2);
+		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, stride, nullptr);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void *>(sizeof(glm::vec4)));
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void *>(sizeof(glm::vec4) + sizeof(glm::vec3)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void *>(sizeof(glm::vec4) + sizeof(glm::vec3) * 2));
+		glEnableVertexAttribArray(3);
+		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void *>(sizeof(glm::vec4) + sizeof(glm::vec3) * 2 + sizeof(glm::vec2)));
+		glEnableVertexAttribArray(4);
+		break;
+	case buffer_attrib::POINT_LIGHT:
+		// TODO
+		// A point light needs:
+		//	position
+		//	intensity - proportional to displayed size
+		//	color
+		break;
+	}
+
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 }

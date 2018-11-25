@@ -180,37 +180,28 @@ void shader_program::update(const std::shared_ptr<environment>& env_ptr, const b
 
 	if (first)
 	{
-		if (env_ptr->has_env_map())
-		{
-			env_ptr->shader_load_env_map(program_);
-		}
-		else
-		{
-			// The lights uniform
-			const auto light_pos_loc = glGetUniformLocation(program_, "lightPositions");
-			const auto light_pos = env_ptr->get_light_positions();
-			if (!light_pos.empty())
-				glUniform3fv(light_pos_loc, light_pos.size(), &light_pos[0][0]);
+		env_ptr->shader_load_env_map(program_);
 
-			const int light_count_limit = 20;
-			const auto lights_count_loc = glGetUniformLocation(program_, "lightsCount");
-			glUniform1i(lights_count_loc, light_pos.size() > light_count_limit ? light_count_limit : light_pos.size());
+		//TODO: exchange for a buffer
+		// The lights uniform
+		const auto light_pos_loc = glGetUniformLocation(program_, "lightPositions");
+		const auto light_pos = env_ptr->get_light_positions();
+		if (!light_pos.empty())
+			glUniform3fv(light_pos_loc, light_pos.size(), &light_pos[0][0]);
 
-			const auto light_col_loc = glGetUniformLocation(program_, "lightColors");
-			const auto light_col = env_ptr->get_light_colors();
-			if (!light_col.empty())
-				glUniform3fv(light_col_loc, light_col.size(), &light_col[0][0]);
+		const int light_count_limit = 20;
+		const auto lights_count_loc = glGetUniformLocation(program_, "lightsCount");
+		glUniform1i(lights_count_loc, light_pos.size() > light_count_limit ? light_count_limit : light_pos.size());
 
-			const auto lights_diff_loc = glGetUniformLocation(program_, "lightDiffI");
-			const auto lights_diff = env_ptr->get_light_diffuse_intensities();
-			if (!lights_diff.empty())
-				glUniform1fv(lights_diff_loc, lights_diff.size(), &lights_diff[0]);
+		const auto light_col_loc = glGetUniformLocation(program_, "lightColors");
+		const auto light_col = env_ptr->get_light_colors();
+		if (!light_col.empty())
+			glUniform3fv(light_col_loc, light_col.size(), &light_col[0][0]);
 
-			const auto lights_spec_loc = glGetUniformLocation(program_, "lightSpecI");
-			const auto lights_spec = env_ptr->get_light_specular_intensities();
-			if (!lights_spec.empty())
-				glUniform1fv(lights_spec_loc, lights_spec.size(), &lights_spec[0]);
-		}
+		const auto lights_diff_loc = glGetUniformLocation(program_, "lightIntensities");
+		const auto lights_diff = env_ptr->get_light_intensities();
+		if (!lights_diff.empty())
+			glUniform1fv(lights_diff_loc, lights_diff.size(), &lights_diff[0]);
 	}
 }
 
@@ -257,31 +248,15 @@ void material::use_program(const GLuint program)
 
 void material::update()
 {
+	// TODO: create the material polymorphism to be able to use both classic Phong and PBR
 	const auto use_texture_loc = glGetUniformLocation(program_, "useTexture");
 	glUniform1i(use_texture_loc, use_texture_);
 	
 	const auto mat_color_loc = glGetUniformLocation(program_, "material.color");
 	glUniform3fv(mat_color_loc, 1, &color_[0]);
 
-	const auto mat_specular_color_loc = glGetUniformLocation(program_, "material.specular_color");
-	specular_color_ = glm::vec3(1, 1, 1);
-	glUniform3fv(mat_specular_color_loc, 1, &specular_color_[0]);
-
-	const float ka = 0.2f;
-	const float kd = 1.0f;
-	const float ks = 0.2f;
-
-	const float roughness = 0.0f;
+	const float roughness = 0.06f;
 	const float metalness = 1;
-
-	const auto ka_loc = glGetUniformLocation(program_, "material.ambience_c");
-	glUniform1f(ka_loc, ka);
-
-	const auto kd_loc = glGetUniformLocation(program_, "material.diffuse_c");
-	glUniform1f(kd_loc, kd);
-
-	const auto ks_loc = glGetUniformLocation(program_, "material.specular_c");
-	glUniform1f(ks_loc, ks);
 
 	const auto roughness_loc = glGetUniformLocation(program_, "material.roughness");
 	glUniform1f(roughness_loc, roughness);
