@@ -350,7 +350,7 @@ float light::get_intensity() const
 }
 
 environment::environment(camera& cam, const GLuint env_cube_program, const GLuint lights_program)
-	: camera_(cam), environment_map_(0), cube_program_(env_cube_program), lights_program_(lights_program)
+	: camera_(cam), environment_map_hdr_(0), cube_program_(env_cube_program), lights_program_(lights_program)
 {
 	std::vector<vertex> vertices(8);
 	std::vector<unsigned int> indices(36);
@@ -405,18 +405,18 @@ const std::vector<vertex>& environment::get_light_visuals() const
 	return light_visuals_;
 }
 
-void environment::set_environment_map(const GLuint id)
+void environment::set_environment_map(const GLuint hdr_id)
 {
-	environment_map_ = id;
+	environment_map_hdr_ = hdr_id;
 }
 
 void environment::shader_load_env_map(const GLuint program) const
 {
 	glActiveTexture(GL_TEXTURE31);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, environment_map_);
+	glBindTexture(GL_TEXTURE_2D, environment_map_hdr_);
 
-	const auto cubemap_loc = glGetUniformLocation(program, "cubemap");
-	glUniform1i(cubemap_loc, 31);
+	const auto hdr_loc = glGetUniformLocation(program, "environment_map");
+	glUniform1i(hdr_loc, 31);
 }
 
 bool environment::changed() const

@@ -24,9 +24,9 @@ int main(int argc, char **argv)
 	rm.renderer_enable(vizualization::LIGHTS);
 	
 	const auto shader_program_id = rm.create_shader_program("vertex.glsl", "fragment_brdf.glsl");
-	const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(1.0f, 0.843f, 0.0f));
+	const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(1.0f, 1.0f, 1.0f));
 
-	const auto model = rm.load_model("Human_body.obj", true, mat_id_notex);
+	const auto model = rm.load_model("32k_v_sphere.obj", true, mat_id_notex);
 
 	const int instance_count = 4;
 	std::vector<instance_handle> handles;
@@ -42,11 +42,12 @@ int main(int argc, char **argv)
 
 	//rm.load_environment_cube_map("cubemap//neg_z.png", "cubemap//pos_z.png", "cubemap//neg_x.png", "cubemap//pos_x.png", "cubemap//neg_y.png", "cubemap//pos_y.png");
 	//rm.load_environment_cube_map("cubemap//uni.png", "cubemap//uni.png", "cubemap//uni.png", "cubemap//uni.png", "cubemap//uni.png", "cubemap//uni.png");
-	rm.load_environment_cube_map("cubemap//z.png", "cubemap//z.png", "cubemap//x.png", "cubemap//x.png", "cubemap//y.png", "cubemap//y.png");
+	//rm.load_environment_cube_map("cubemap//z.png", "cubemap//z.png", "cubemap//x.png", "cubemap//x.png", "cubemap//y.png", "cubemap//y.png");
 	//rm.load_environment_cube_map(
 	//	"cubemap//cubemap_neg_z.png", "cubemap//cubemap_pos_z.png", 
 	//	"cubemap//cubemap_neg_x.png", "cubemap//cubemap_pos_x.png", 
 	//	"cubemap//cubemap_neg_y.png", "cubemap//cubemap_pos_y.png");
+	rm.load_hdr_environment("noon_grass_2k.hdr");
 
 	auto counter = instance_count - 1;
 	auto total_time = 0.0f;

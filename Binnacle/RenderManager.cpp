@@ -378,6 +378,7 @@ void render_manager::delete_material(const int index)
 void render_manager::load_environment_cube_map(const std::string& neg_z, const std::string& pos_z,
 	const std::string& neg_x, const std::string& pos_x, const std::string& neg_y, const std::string& pos_y) const
 {
+	// TODO: delete previous environment maps
 	if (!env_ptr_)
 		return;
 
@@ -426,6 +427,32 @@ void render_manager::load_environment_cube_map(const std::string& neg_z, const s
 	//glActiveTexture(GL_TEXTURE31);
 	//glBindTexture(GL_TEXTURE_CUBE_MAP, tex_id);
 
+}
+
+void render_manager::load_hdr_environment(const std::string & hdr_img_file) const
+{
+	// TODO: delete previous environment maps
+	if (!env_ptr_)
+		return;
+
+	GLuint tex_id;
+	glGenTextures(1, &tex_id);
+
+	glActiveTexture(GL_TEXTURE30);
+	glBindTexture(GL_TEXTURE_2D, tex_id);
+	
+	SOIL_load_OGL_HDR_texture(hdr_img_file.c_str(), SOIL_HDR_RGBdivA, 0, tex_id, 0); // TODO: rescale to max
+
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	env_ptr_->set_environment_map(tex_id);
+	rnd_ptr_->enable(vizualization::ENVIRONMENT_MAP);
 }
 
 #define time_now std::chrono::high_resolution_clock::now()

@@ -85,6 +85,8 @@ struct render_manager
 								   const std::string& neg_x, const std::string& pos_x, 
 								   const std::string& neg_y, const std::string& pos_y) const;
 
+	void load_hdr_environment(const std::string& hdr_img_file) const;
+
 	// Press the timer
 	void start_framerate();
 

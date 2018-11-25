@@ -23,7 +23,8 @@ vec3 specular_color;
 
 uniform sampler2D diffuseMap;
 uniform sampler2D normalMap;
-uniform samplerCube cubemap;
+//uniform samplerCube cubemap;
+uniform sampler2D environment_map;
 
 uniform vec3 lightPositions[20]; // max number of lights in the scene
 uniform vec3 lightColors[20];
@@ -40,7 +41,6 @@ uniform Material material;
 layout(location = 0) out vec4 fragColor;
 
 const float PI = 3.14159265358979323846;
-
 
 vec3 normal;
 vec3 wi;
@@ -149,6 +149,28 @@ vec3 sample_diffuse(int k)
 	return  (diffuse_color / PI * lightColors[k] * dot(normal, wo) * lightIntensities[k]) / (distance * distance);
 }
 
+vec2 ray_to_uv(vec3 direction)
+{
+	float cos_theta = direction.y;
+	float theta = acos(cos_theta);
+
+	if (direction.x == 0)
+		direction.x = 0.001;
+
+	float tan_phi = direction.z / direction.x;
+	float phi = atan(tan_phi);
+	
+	if (direction.x < 0)
+		phi += PI;
+
+	phi += PI / 2;
+
+	float map_x = (phi) / (2 * PI);
+	float map_y = theta / PI;
+
+	return vec2(map_x, map_y);
+}
+
 vec3 sample_brdf_environment()
 {
 	vec3 half_vector = sample_halfvector_GGX();
@@ -160,7 +182,8 @@ vec3 sample_brdf_environment()
 
 	vec4 res = brdf(wi, wo, half_vector.y, normal, half_vector_transformed);
 	vec3 brdf_color = res.rgb;
-	vec3 tex_color = textureCube(cubemap, wo).rgb;
+	vec4 tex = texture(environment_map, ray_to_uv(wo));
+	vec3 tex_color = tex.rgb / tex.a;
 
 	return (brdf_color * tex_color * dot(normal, wo) / pdf(res.a, half_vector.y, wo));
 }
@@ -170,7 +193,9 @@ vec3 sample_diffuse_environment()
 	vec3 half_vector = sample_uniform();
 	vec3 half_vector_transformed = normalize(TBN * half_vector);
 	vec3 wo = reflect(wi, half_vector_transformed);
-	vec3 tex_color = textureCube(cubemap, wo).rgb;
+	
+	vec4 tex = texture(environment_map, ray_to_uv(wo));
+	vec3 tex_color = tex.rgb * tex.a;
 	//return half_vector;
 	
 	return  diffuse_color / PI * tex_color;

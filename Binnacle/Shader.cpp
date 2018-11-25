@@ -31,7 +31,7 @@ bool shader_program::load_shader(shader_type&& type, const std::string& filename
 	}
 	shader_text += line + '\n';
 
-	shaders_.insert_or_assign(type, shader_text); // shader_text.length() -
+	shaders_.insert_or_assign(type, shader_text);
 
 	return true;
 }
@@ -255,8 +255,8 @@ void material::update()
 	const auto mat_color_loc = glGetUniformLocation(program_, "material.color");
 	glUniform3fv(mat_color_loc, 1, &color_[0]);
 
-	const float roughness = 0.06f;
-	const float metalness = 1;
+	const float roughness = 0.2f;
+	const float metalness = 0;
 
 	const auto roughness_loc = glGetUniformLocation(program_, "material.roughness");
 	glUniform1f(roughness_loc, roughness);

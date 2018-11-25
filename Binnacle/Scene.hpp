@@ -274,7 +274,7 @@ struct environment
 
 	const std::vector<vertex>& get_light_visuals() const;
 
-	void set_environment_map(GLuint id);
+	void set_environment_map(GLuint hdr_id);
 
 	void shader_load_env_map(GLuint program) const;
 	bool changed() const;
@@ -291,7 +291,7 @@ private:
 	std::vector<vertex> light_visuals_;
 	camera camera_;
 
-	GLuint environment_map_;
+	GLuint environment_map_hdr_;
 
 	model cube_;
 	GLuint cube_program_;
