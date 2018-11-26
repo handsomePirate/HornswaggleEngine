@@ -1,8 +1,0 @@
-radius: 0.06
-detail: 8
-axisWidth: 0.2
-minX: -2
-minZ: -2
-maxX: 2
-maxZ: 2
-maxY: 3

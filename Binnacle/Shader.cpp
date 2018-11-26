@@ -77,7 +77,7 @@ bool shader_program::compile_and_link_shaders()
 
 	glCompileShaderARB(vertex_shader);
 	glCompileShaderARB(fragment_shader);
-
+	//TODO: add geometry shader
 
 	GLint compiled;
 
@@ -255,8 +255,8 @@ void material::update()
 	const auto mat_color_loc = glGetUniformLocation(program_, "material.color");
 	glUniform3fv(mat_color_loc, 1, &color_[0]);
 
-	const float roughness = 0.2f;
-	const float metalness = 0;
+	const float roughness = 0.01f;
+	const float metalness = 1;
 
 	const auto roughness_loc = glGetUniformLocation(program_, "material.roughness");
 	glUniform1f(roughness_loc, roughness);

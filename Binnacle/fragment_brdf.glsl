@@ -183,7 +183,7 @@ vec3 sample_brdf_environment()
 	vec4 res = brdf(wi, wo, half_vector.y, normal, half_vector_transformed);
 	vec3 brdf_color = res.rgb;
 	vec4 tex = texture(environment_map, ray_to_uv(wo));
-	vec3 tex_color = tex.rgb / tex.a;
+	vec3 tex_color = tex.rgb / (tex.a * tex.a);
 
 	return (brdf_color * tex_color * dot(normal, wo) / pdf(res.a, half_vector.y, wo));
 }
@@ -195,7 +195,7 @@ vec3 sample_diffuse_environment()
 	vec3 wo = reflect(wi, half_vector_transformed);
 	
 	vec4 tex = texture(environment_map, ray_to_uv(wo));
-	vec3 tex_color = tex.rgb * tex.a;
+	vec3 tex_color = tex.rgb;
 	//return half_vector;
 	
 	return  diffuse_color / PI * tex_color;

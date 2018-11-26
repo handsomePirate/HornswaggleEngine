@@ -278,18 +278,44 @@ int render_manager::load_model_data(const std::vector<vertex>& vertices, const s
 int render_manager::load_model_data(float* vertex_positions, const size_t vertex_count, unsigned int* indices,
                                      const size_t index_count, const int mat_id)
 {
-	//const auto vertices = new vertex[vertex_count];
-	//
-	//auto vert_pos = reinterpret_cast<glm::vec3 *>(vertex_positions);
-	//for (size_t i = 0; i < vertex_count; ++i)
-	//{
-	//	vertices[i] = vertex(glm::vec4(vert_pos->x, vert_pos->y, vert_pos->z, 1), glm::vec3(0, 1, 0), glm::vec3(1, 0, 0), glm::vec2(0, 0));
-	//	++vert_pos;
-	//}
-	//
-	//load_model_data(vertices, vertex_count, indices, index_count, mat_id);
-	//delete[] vertices;
-	return 0;
+	std::vector<vertex> vertices(vertex_count);
+	std::vector<unsigned int> indices_vec(index_count);
+	
+	auto vert_pos = reinterpret_cast<glm::vec3 *>(vertex_positions);
+	for (size_t i = 0; i < vertex_count; ++i)
+	{
+		vertices[i] = vertex(glm::vec4(vert_pos->x, vert_pos->y, vert_pos->z, 1), glm::vec3(0, 1, 0), glm::vec3(1, 0, 0), glm::vec2(0, 0));
+		++vert_pos;
+	}
+
+	for (size_t i = 0; i < index_count; ++i)
+	{
+		indices_vec[i] = indices[i];
+	}
+	
+	return load_model_data(vertices, indices_vec, mat_id);
+}
+
+int render_manager::load_model_data(float *vertex_positions, float *normals, size_t vertex_count, unsigned int * indices, size_t index_count, int mat_id)
+{
+	std::vector<vertex> vertices(vertex_count);
+	std::vector<unsigned int> indices_vec(index_count);
+
+	auto vert_pos = reinterpret_cast<glm::vec3 *>(vertex_positions);
+	auto norm_pos = reinterpret_cast<glm::vec3 *>(normals);
+	for (size_t i = 0; i < vertex_count; ++i)
+	{
+		vertices[i] = vertex(glm::vec4(vert_pos->x, vert_pos->y, vert_pos->z, 1), glm::vec3(norm_pos->x, norm_pos->y, norm_pos->z), glm::vec3(1, 0, 0), glm::vec2(0, 0));
+		++vert_pos;
+		++norm_pos;
+	}
+
+	for (size_t i = 0; i < index_count; ++i)
+	{
+		indices_vec[i] = indices[i];
+	}
+
+	return load_model_data(vertices, indices_vec, mat_id);
 }
 
 void render_manager::delete_model(const int index)
@@ -583,8 +609,11 @@ void render_manager::mouse_move_callback(GLFWwindow* window, const double x_pos,
 	cursor_dx_ = - (x_pos - cursor_x_) / resize_const;
 	cursor_dy_ = (y_pos - cursor_y_) / resize_const;
 
-	get_camera().rotate(glm::vec3(0.0f, 1.0f, 0.0f), cursor_dx_);
-	get_camera().rotate_local(glm::vec3(1.0f, 0.0f, 0.0f), cursor_dy_);
+	if (reset_cursor_)
+	{
+		get_camera().rotate(glm::vec3(0.0f, 1.0f, 0.0f), cursor_dx_);
+		get_camera().rotate_local(glm::vec3(1.0f, 0.0f, 0.0f), cursor_dy_);
+	}
 
 	if (reset_cursor_)
 	{

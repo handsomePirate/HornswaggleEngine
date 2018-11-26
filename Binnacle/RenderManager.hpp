@@ -61,6 +61,7 @@ struct render_manager
 	int load_model(const std::string& filename_model, bool smooth, int mat_id = -1);
 	int load_model_data(const std::vector<vertex>& vertices, const std::vector<unsigned int>& indices, int mat_id = -1);
 	int load_model_data(float *vertex_positions, size_t vertex_count, unsigned int* indices, size_t index_count, int mat_id = -1);
+	int load_model_data(float *vertex_positions, float *normals, size_t vertex_count, unsigned int* indices, size_t index_count, int mat_id = -1);
 	// Delete a model identified by its id
 	void delete_model(int index);
 

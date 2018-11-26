@@ -61,7 +61,8 @@ void main(void)
 	float map_y = theta / PI;
 	vec2 map_coords = vec2(map_x, map_y);
 
-	fragColor = vec4(texture(environment_map, map_coords).rgb, 1);
+	vec4 tex = texture(environment_map, map_coords);
+	fragColor = vec4(tex.rgb / tex.a, 1);
 
 	//fragColor = vec4(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi), 1);
 	//fragColor = vec4(map_x < 0.0001, map_x < 0.0002, map_x < 0.0003, 1);
