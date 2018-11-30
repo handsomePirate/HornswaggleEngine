@@ -7,10 +7,6 @@
 #include <thread>
 #include <glm/gtx/norm.hpp>
 
-
-#define LIB
-#undef LIB
-
 #ifndef LIB
 int main(int argc, char **argv)
 {

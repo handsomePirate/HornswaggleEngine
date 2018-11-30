@@ -38,6 +38,7 @@ struct renderer
 	bool is_enabled(const vizualization& option) const;
 
 	void set_buffer_attrib(const buffer_attrib& option) const;
+	void set_background_color(const glm::vec3& color);
 
 private:
 	GLuint vbo_{};
@@ -45,4 +46,5 @@ private:
 	GLuint vio_{};
 
 	bool *vizualization_options_;
+	glm::vec3 background_color_;
 };

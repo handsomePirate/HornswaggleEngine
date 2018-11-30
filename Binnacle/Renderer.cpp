@@ -19,13 +19,14 @@ renderer::renderer()
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
+	background_color_ = glm::vec3(0.1f, 0.1f, 0.1f);
 }
 
 void renderer::render(const std::shared_ptr<scene>& scn_ptr, 
 	const std::shared_ptr<std::map<int, material>>& mat_ptr,
 	const std::shared_ptr<environment>& env_ptr) const
 {
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+	glClearColor(background_color_.r, background_color_.g, background_color_.b, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	//glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_DEPTH_BUFFER_BIT);
@@ -134,4 +135,9 @@ void renderer::set_buffer_attrib(const buffer_attrib& option) const
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+}
+
+void renderer::set_background_color(const glm::vec3& color)
+{
+	background_color_ = color;
 }

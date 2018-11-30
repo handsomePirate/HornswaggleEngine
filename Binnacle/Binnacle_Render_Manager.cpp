@@ -1,3 +1,4 @@
+#ifdef LIB
 #include "Binnacle_Render_Manager.hpp"
 #include "RenderManager.hpp"
 
@@ -16,6 +17,11 @@ BINNACLE_API void binnacle_set_camera(binnacle_ptr binnacle, float px, float py,
 {
 	reinterpret_cast<render_manager *>(binnacle)->set_camera(glm::vec3(px, py, pz), glm::vec3(fx, fy, fz), glm::vec3(ux, uy, uz), 
 		45, reinterpret_cast<render_manager *>(binnacle)->get_aspect_ratio(), 0.1, 100);
+}
+
+BINNACLE_API void binnacle_set_background_color(binnacle_ptr binnacle, float r, float g, float b)
+{
+	reinterpret_cast<render_manager *>(binnacle)->set_background_color(glm::vec3(r, g, b));
 }
 
 BINNACLE_API bool binnacle_is_valid(binnacle_ptr binnacle)
@@ -139,3 +145,4 @@ BINNACLE_API bool binnacle_should_end(binnacle_ptr binnacle)
 {
 	return reinterpret_cast<render_manager *>(binnacle)->should_end();
 }
+#endif

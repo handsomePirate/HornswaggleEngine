@@ -15,6 +15,8 @@ extern "C"
 	BINNACLE_API void binnacle_release(binnacle_ptr binnacle);
 	BINNACLE_API void binnacle_set_camera(binnacle_ptr binnacle, float px, float py, float pz, float fx, float fy, float fz, float ux, float uy, float uz);
 
+	BINNACLE_API void binnacle_set_background_color(binnacle_ptr binnacle, float r, float g, float b);
+
 	BINNACLE_API bool binnacle_is_valid(binnacle_ptr binnacle);
 
 	BINNACLE_API float binnacle_get_aspect_ratio(binnacle_ptr binnacle);

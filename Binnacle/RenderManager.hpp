@@ -57,6 +57,8 @@ struct render_manager
 	void set_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, float fov, float aspect, float z_near, float z_far) const;
 	camera& get_camera() const;
 
+	void set_background_color(const glm::vec3& color);
+
 	// Load an OBJ model from a file (returns its assigned id)
 	int load_model(const std::string& filename_model, bool smooth, int mat_id = -1);
 	int load_model_data(const std::vector<vertex>& vertices, const std::vector<unsigned int>& indices, int mat_id = -1);

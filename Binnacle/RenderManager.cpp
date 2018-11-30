@@ -259,6 +259,11 @@ camera& render_manager::get_camera() const
 	return env_ptr_->get_camera();
 }
 
+void render_manager::set_background_color(const glm::vec3& color)
+{
+	rnd_ptr_->set_background_color(color);
+}
+
 int render_manager::load_model(const std::string& filename_model, const bool smooth, const int mat_id)
 {
 	ASSIGN_FREE_ID(mod_free_ids_, mod_next_free_id_);
