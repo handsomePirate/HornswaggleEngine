@@ -9,7 +9,7 @@
 render_manager::render_manager()
 	: window_(nullptr), valid_(false), should_end_(false), width_(0), height_(0), window_visible_(false) {}
 
-render_manager::render_manager(const bool fullscreen, int samples, const int major_version, const int minor_version, const int width, const int height, const std::string& window_text, const bool window_visible)
+render_manager::render_manager(const bool fullscreen, int samples, const int major_version, const int minor_version, const int width, const int height, const std::string& window_text, std::string& root_path, const bool window_visible)
 	: valid_(true), should_end_(false), width_(width), height_(height), window_visible_(window_visible)
 {
 	if (!window_visible)
@@ -46,6 +46,8 @@ render_manager::render_manager(const bool fullscreen, int samples, const int maj
 
 	// TODO: make sure that more applications at the same time do not break this
 	glfwMakeContextCurrent(window_);
+
+	create_paths(root_path);
 
 	// Initialize GLEW
 	glewExperimental = GL_TRUE;
@@ -123,18 +125,20 @@ int render_manager::create_shader_program(const std::string& vertex_shader_file,
 {
 	auto shp = shader_program();
 
+	const std::string shaders_path = path_manipulator_->get_full_path("shaders");
+
 	std::cout << "Shaders: " << vertex_shader_file << ", " << fragment_shader_file;
 	if (geometry_shader_file.empty())
 		std::cout << ", " << geometry_shader_file;
 	std::cout << std::endl;
 
-	if (!shp.load_shader(VERTEX, vertex_shader_file))
+	if (!shp.load_shader(VERTEX, shaders_path + vertex_shader_file))
 		std::cout << "Cannot open or read from " << vertex_shader_file << "!" << std::endl;
-	if (!shp.load_shader(FRAGMENT, fragment_shader_file))
+	if (!shp.load_shader(FRAGMENT, shaders_path + fragment_shader_file))
 		std::cout << "Cannot open or read from " << fragment_shader_file << "!" << std::endl;
 	if (!geometry_shader_file.empty())
 	{
-		if (!shp.load_shader(GEOMETRY, geometry_shader_file))
+		if (!shp.load_shader(GEOMETRY, shaders_path + geometry_shader_file))
 			std::cout << "Cannot open or read from " << geometry_shader_file << "!" << std::endl;
 	}
 
@@ -267,7 +271,8 @@ void render_manager::set_background_color(const glm::vec3& color)
 int render_manager::load_model(const std::string& filename_model, const bool smooth, const int mat_id)
 {
 	ASSIGN_FREE_ID(mod_free_ids_, mod_next_free_id_);
-	(*mod_ptr_)[id] = model(filename_model, smooth, mat_id);
+	const std::string models_path = path_manipulator_->get_full_path("models");
+	(*mod_ptr_)[id] = model(models_path + filename_model, smooth, mat_id);
 
 	return id;
 }
@@ -337,6 +342,31 @@ void render_manager::delete_model(const int index)
 		mod_ptr_->erase(index);
 		ins_ptr_->erase(index);
 	}
+}
+
+void render_manager::register_path(std::string& name, std::string& path_from_root) const
+{
+	path_manipulator_->register_path(name, path_from_root);
+}
+
+void render_manager::register_path(std::string&& name, std::string& path_from_root) const
+{
+	register_path(name, path_from_root);
+}
+
+void render_manager::register_path(std::string& name, std::string&& path_from_root) const
+{
+	register_path(name, path_from_root);
+}
+
+void render_manager::register_path(std::string&& name, std::string&& path_from_root) const
+{
+	register_path(name, path_from_root);
+}
+
+std::string render_manager::get_full_path(const std::string& name) const
+{
+	return path_manipulator_->get_full_path(name);
 }
 
 int render_manager::instance_model(const int index)
@@ -466,13 +496,15 @@ void render_manager::load_hdr_environment(const std::string & hdr_img_file) cons
 	if (!env_ptr_)
 		return;
 
+	const std::string hdr_path = path_manipulator_->get_full_path("hdr_textures");
+
 	GLuint tex_id;
 	glGenTextures(1, &tex_id);
 
 	glActiveTexture(GL_TEXTURE30);
 	glBindTexture(GL_TEXTURE_2D, tex_id);
 	
-	SOIL_load_OGL_HDR_texture(hdr_img_file.c_str(), SOIL_HDR_RGBdivA, 0, tex_id, 0); // TODO: rescale to max
+	SOIL_load_OGL_HDR_texture((hdr_path + hdr_img_file).c_str(), SOIL_HDR_RGBdivA, 0, tex_id, 0); // TODO: rescale to max
 
 	glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -582,6 +614,12 @@ void render_manager::init_scene()
 {
 	if (valid_)
 		scn_ptr_ = std::make_shared<scene>();
+}
+
+void render_manager::create_paths(std::string& root_path)
+{
+	path_manipulator_ = std::make_unique<path_manipulator>(root_path);
+
 }
 
 void render_manager::key_callback(GLFWwindow* window, const int key, const int scancode, const int action, const int mods)

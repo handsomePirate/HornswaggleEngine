@@ -3,6 +3,7 @@
 
 #include "RenderManager.hpp"
 #include "MathHelper.hpp"
+#include "PathManipulator.hpp"
 #include <Windows.h>
 #include <thread>
 #include <glm/gtx/norm.hpp>
@@ -10,7 +11,13 @@
 #ifndef LIB
 int main(int argc, char **argv)
 {
-	render_manager rm(false, 4, 3, 0, 640, 480, "OpenGL");
+	std::string binnacle_root = argv[0];
+	path_manipulator::cut_last(binnacle_root);
+	render_manager rm(false, 4, 3, 0, 640, 480, "OpenGL", binnacle_root);
+	rm.register_path("shaders", "..\\..\\shaders");
+	rm.register_path("models", "..\\..\\models");
+	rm.register_path("hdr_textures", "..\\..\\textures\\hdr");
+	rm.register_path("ldr_textures", "..\\..\\textures\\ldr");
 
 	rm.init_renderer();
 
@@ -23,7 +30,7 @@ int main(int argc, char **argv)
 	const auto shader_program_id = rm.create_shader_program("vertex.glsl", "fragment_brdf.glsl");
 	const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(1.0f, 1.0f, 1.0f)); // glm::vec3(1.0f, 0.843f, 0.0f)
 
-	const auto model = rm.load_model("32k_v_sphere.obj", true, mat_id_notex);
+	const auto model = rm.load_model("Human_body.obj", true, mat_id_notex);
 
 	const int instance_count = 4;
 	std::vector<instance_handle> handles;

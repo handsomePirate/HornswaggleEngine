@@ -11,7 +11,7 @@ extern "C"
 	typedef int * binnacle_ptr;
 	typedef int * handle_ptr;
 
-	BINNACLE_API binnacle_ptr binnacle_init(int width, int height, bool texture);
+	BINNACLE_API binnacle_ptr binnacle_init(int width, int height, std::string& root_path, bool texture);
 	BINNACLE_API void binnacle_release(binnacle_ptr binnacle);
 	BINNACLE_API void binnacle_set_camera(binnacle_ptr binnacle, float px, float py, float pz, float fx, float fy, float fz, float ux, float uy, float uz);
 
@@ -20,6 +20,8 @@ extern "C"
 	BINNACLE_API bool binnacle_is_valid(binnacle_ptr binnacle);
 
 	BINNACLE_API float binnacle_get_aspect_ratio(binnacle_ptr binnacle);
+
+	BINNACLE_API void binnacle_register_path(binnacle_ptr binnacle, std::string& name, std::string& path_from_root);
 
 	BINNACLE_API int binnacle_create_shader_program(binnacle_ptr binnacle, const std::string& vertex_shader_file, const std::string& fragment_shader_file, const std::string& geometry_shader_file = "");
 	BINNACLE_API void binnacle_init_renderer(binnacle_ptr binnacle);

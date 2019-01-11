@@ -255,7 +255,7 @@ void material::update()
 	const auto mat_color_loc = glGetUniformLocation(program_, "material.color");
 	glUniform3fv(mat_color_loc, 1, &color_[0]);
 
-	const float roughness = 0.01f;
+	const float roughness = 0.0f;
 	const float metalness = 1;
 
 	const auto roughness_loc = glGetUniformLocation(program_, "material.roughness");

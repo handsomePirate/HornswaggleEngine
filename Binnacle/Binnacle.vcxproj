@@ -54,7 +54,7 @@
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
@@ -217,6 +217,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Binnacle_Render_Manager.cpp" />
+    <ClCompile Include="PathManipulator.cpp" />
     <ClCompile Include="RenderHelper.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Renderer.cpp" />
@@ -228,6 +229,7 @@
   <ItemGroup>
     <ClInclude Include="Binnacle_Render_Manager.hpp" />
     <ClInclude Include="BitHelper.hpp" />
+    <ClInclude Include="PathManipulator.hpp" />
     <ClInclude Include="RenderHelper.hpp" />
     <ClInclude Include="Shader.hpp" />
     <ClInclude Include="MathHelper.hpp" />
@@ -238,14 +240,14 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
-    <None Include="fragment_brdf_example.glsl" />
-    <None Include="fragment_env_cube.glsl" />
-    <None Include="fragment_brdf.glsl" />
-    <None Include="fragment_fresnel_color.glsl" />
-    <None Include="fragment_lights.glsl" />
-    <None Include="fragment_phong.glsl" />
-    <None Include="vertex.glsl" />
-    <None Include="vertex_lights.glsl" />
+    <None Include="shaders\fragment_brdf.glsl" />
+    <None Include="shaders\fragment_brdf_example.glsl" />
+    <None Include="shaders\fragment_env_cube.glsl" />
+    <None Include="shaders\fragment_fresnel_color.glsl" />
+    <None Include="shaders\fragment_lights.glsl" />
+    <None Include="shaders\fragment_phong.glsl" />
+    <None Include="shaders\vertex.glsl" />
+    <None Include="shaders\vertex_lights.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

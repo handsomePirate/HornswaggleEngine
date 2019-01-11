@@ -42,6 +42,9 @@
     <ClCompile Include="RenderHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PathManipulator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Renderer.hpp">
@@ -71,32 +74,35 @@
     <ClInclude Include="RenderHelper.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PathManipulator.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="vertex.glsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="fragment_phong.glsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="fragment_brdf.glsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="fragment_env_cube.glsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="fragment_brdf_example.glsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="fragment_fresnel_color.glsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="fragment_lights.glsl">
-      <Filter>Shaders</Filter>
-    </None>
-    <None Include="vertex_lights.glsl">
-      <Filter>Shaders</Filter>
-    </None>
     <None Include="cpp.hint" />
+    <None Include="shaders\fragment_brdf.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\fragment_brdf_example.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\fragment_env_cube.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\fragment_fresnel_color.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\fragment_lights.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\fragment_phong.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\vertex.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\vertex_lights.glsl">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

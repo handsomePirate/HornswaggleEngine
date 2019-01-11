@@ -10,6 +10,7 @@
 #include "Shader.hpp"
 
 #include <GLFW/glfw3.h>
+#include "PathManipulator.hpp"
 
 // The pixel form structure
 struct rgba
@@ -24,7 +25,7 @@ struct rgba
 struct render_manager
 {
 	render_manager();
-	render_manager(bool fullscreen, int samples, int major_version, int minor_version, int width, int height, const std::string& window_text, bool window_visible = true);
+	render_manager(bool fullscreen, int samples, int major_version, int minor_version, int width, int height, const std::string& window_text, std::string& root_path, bool window_visible = true);
 	render_manager(const render_manager& rm) = delete;
 	render_manager& operator=(const render_manager& rm) = delete;
 	render_manager(render_manager && rm) = default;
@@ -67,6 +68,12 @@ struct render_manager
 	// Delete a model identified by its id
 	void delete_model(int index);
 
+	void register_path(std::string& name, std::string& path_from_root) const;
+	void register_path(std::string&& name, std::string& path_from_root) const;
+	void register_path(std::string& name, std::string&& path_from_root) const;
+	void register_path(std::string&& name, std::string&& path_from_root) const;
+	std::string get_full_path(const std::string& name) const;
+
 	// Create an instance of a model identified by its id
 	int instance_model(int index);
 	// Create an instance of a model identified by the instance id
@@ -102,6 +109,7 @@ struct render_manager
 	bool should_end() const;
 private:
 	void init_scene();
+	void create_paths(std::string& root_path);
 
 	template<class ...T>
 	void init_environment(camera&& cam, GLuint cube_program, GLuint lights_program, T&&... args);
@@ -161,6 +169,8 @@ private:
 
 	unsigned int vertex_count_ = 0;
 	unsigned int poly_count_ = 0;
+
+	std::unique_ptr<path_manipulator> path_manipulator_;
 
 	// texture rendering variables
 	GLuint texture_fbo_ = 0;

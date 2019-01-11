@@ -2,9 +2,9 @@
 #include "Binnacle_Render_Manager.hpp"
 #include "RenderManager.hpp"
 
-BINNACLE_API binnacle_ptr binnacle_init(const int width, const int height, const bool texture)
+BINNACLE_API binnacle_ptr binnacle_init(const int width, const int height, std::string& root_path, const bool texture)
 {
-	render_manager *binnacle = new render_manager(false, 4, 3, 0, width, height, "OpenGL", !texture);
+	render_manager *binnacle = new render_manager(false, 4, 3, 0, width, height, "OpenGL", root_path, !texture);
 	return reinterpret_cast<binnacle_ptr>(binnacle);
 }
 
@@ -13,7 +13,10 @@ BINNACLE_API void binnacle_release(binnacle_ptr binnacle)
 	delete reinterpret_cast<render_manager *>(binnacle);
 }
 
-BINNACLE_API void binnacle_set_camera(binnacle_ptr binnacle, float px, float py, float pz, float fx, float fy, float fz, float ux, float uy, float uz)
+BINNACLE_API void binnacle_set_camera(binnacle_ptr binnacle, 
+	const float px, const float py, const float pz, 
+	const float fx, const float fy, const float fz, 
+	const float ux, const float uy, const float uz)
 {
 	reinterpret_cast<render_manager *>(binnacle)->set_camera(glm::vec3(px, py, pz), glm::vec3(fx, fy, fz), glm::vec3(ux, uy, uz), 
 		45, reinterpret_cast<render_manager *>(binnacle)->get_aspect_ratio(), 0.1, 100);
@@ -32,6 +35,11 @@ BINNACLE_API bool binnacle_is_valid(binnacle_ptr binnacle)
 BINNACLE_API float binnacle_get_aspect_ratio(binnacle_ptr binnacle)
 {
 	return reinterpret_cast<render_manager *>(binnacle)->get_aspect_ratio();
+}
+
+BINNACLE_API void binnacle_register_path(binnacle_ptr binnacle, std::string& name, std::string& path_from_root)
+{
+	reinterpret_cast<render_manager *>(binnacle)->register_path(name, path_from_root);
 }
 
 BINNACLE_API int binnacle_create_shader_program(binnacle_ptr binnacle, const std::string& vertex_shader_file, const std::string& fragment_shader_file,
