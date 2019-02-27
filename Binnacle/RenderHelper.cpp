@@ -1,5 +1,6 @@
 #include "RenderHelper.hpp"
 #include "Scene.hpp"
+#include <iostream>
 
 instance_handle::instance_handle(model_instance *mi)
 	: mi_(mi)

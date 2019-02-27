@@ -217,6 +217,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Binnacle_Render_Manager.cpp" />
+    <ClCompile Include="GPUPathTracer.cpp" />
+    <ClCompile Include="OpenGLRenderer.cpp" />
     <ClCompile Include="PathManipulator.cpp" />
     <ClCompile Include="RenderHelper.cpp" />
     <ClCompile Include="Shader.cpp" />
@@ -229,6 +231,8 @@
   <ItemGroup>
     <ClInclude Include="Binnacle_Render_Manager.hpp" />
     <ClInclude Include="BitHelper.hpp" />
+    <ClInclude Include="GPUPathTracer.hpp" />
+    <ClInclude Include="OpenGLRenderer.hpp" />
     <ClInclude Include="PathManipulator.hpp" />
     <ClInclude Include="RenderHelper.hpp" />
     <ClInclude Include="Shader.hpp" />
@@ -240,12 +244,19 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
+    <None Include="shaders\environment_diffuse_filter.glsl" />
+    <None Include="shaders\filter_vertex.glsl" />
     <None Include="shaders\fragment_brdf.glsl" />
     <None Include="shaders\fragment_brdf_example.glsl" />
     <None Include="shaders\fragment_env_cube.glsl" />
     <None Include="shaders\fragment_fresnel_color.glsl" />
+    <None Include="shaders\fragment_lambert_cook_torrance_GGX.glsl" />
     <None Include="shaders\fragment_lights.glsl" />
     <None Include="shaders\fragment_phong.glsl" />
+    <None Include="shaders\path_trace_compute.glsl" />
+    <None Include="shaders\quad_fragment.glsl" />
+    <None Include="shaders\quad_geometry.glsl" />
+    <None Include="shaders\quad_vertex.glsl" />
     <None Include="shaders\vertex.glsl" />
     <None Include="shaders\vertex_lights.glsl" />
   </ItemGroup>

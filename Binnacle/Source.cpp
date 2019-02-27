@@ -1,4 +1,3 @@
-// Manager
 #include "Binnacle_Render_Manager.hpp"
 
 #include "RenderManager.hpp"
@@ -7,6 +6,8 @@
 #include <Windows.h>
 #include <thread>
 #include <glm/gtx/norm.hpp>
+#include <iostream>
+#include "OpenGLRenderer.hpp"
 
 #ifndef LIB
 int main(int argc, char **argv)
@@ -19,15 +20,21 @@ int main(int argc, char **argv)
 	rm.register_path("hdr_textures", "..\\..\\textures\\hdr");
 	rm.register_path("ldr_textures", "..\\..\\textures\\ldr");
 
-	rm.init_renderer();
+	//rm.init_opengl_renderer();
+	rm.init_path_tracer();
 
-	rm.set_lights(light(glm::vec3(1.0f, 0.1f, 9.0f), glm::vec3(1.0f, 1.0f, 1.0f), 40),
+	//rm.init_path_tracing("path_trace_compute.glsl");
+	//rm.path_trace();
+	//
+	//return 0;
+
+	rm.set_lights(light(glm::vec3(1.0f, 0.1f, 9.0f), glm::vec3(1.0f, 1.0f, 1.0f), 20),
 		light(glm::vec3(-3.0f, 0.8f, 15.0f), glm::vec3(0.75f, 0, 1.0f), 40));
 	rm.set_camera(glm::vec3(), glm::vec3(), glm::vec3(), 45, rm.get_aspect_ratio(), 0.1, 100);
 
 	rm.renderer_enable(vizualization::LIGHTS);
 	
-	const auto shader_program_id = rm.create_shader_program("vertex.glsl", "fragment_brdf.glsl");
+	const auto shader_program_id = rm.create_shader_program("vertex.glsl", "fragment_lambert_cook_torrance_GGX.glsl");
 	const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(1.0f, 1.0f, 1.0f)); // glm::vec3(1.0f, 0.843f, 0.0f)
 
 	const auto model = rm.load_model("Human_body.obj", true, mat_id_notex);
@@ -43,8 +50,8 @@ int main(int argc, char **argv)
 		handles[handles.size() - 1].assign_position(sin(angle) * circle_size, 0, -cos(angle) * circle_size + 5);
 		handles[handles.size() - 1].scale(0.4);
 	}
-
-	rm.load_hdr_environment("noon_grass_2k.hdr");
+	
+	rm.load_hdr_environment("noon_grass_2k.hdr", 2048, 1024, "diffuse.bmp");
 
 	auto counter = instance_count - 1;
 	auto total_time = 0.0f;

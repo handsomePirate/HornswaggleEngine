@@ -45,6 +45,12 @@
     <ClCompile Include="PathManipulator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="OpenGLRenderer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GPUPathTracer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Renderer.hpp">
@@ -77,6 +83,12 @@
     <ClInclude Include="PathManipulator.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="OpenGLRenderer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GPUPathTracer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
@@ -102,6 +114,27 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="shaders\vertex_lights.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\fragment_lambert_cook_torrance_GGX.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\filter_vertex.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\environment_diffuse_filter.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\path_trace_compute.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\quad_fragment.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\quad_geometry.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="shaders\quad_vertex.glsl">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

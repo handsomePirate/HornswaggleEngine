@@ -3,6 +3,15 @@
 
 #include <GL/glew.h>
 
+// The pixel form structure
+struct rgba
+{
+	unsigned char r;
+	unsigned char g;
+	unsigned char b;
+	unsigned char a;
+};
+
 struct texture
 {
 	std::string name;

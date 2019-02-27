@@ -15,6 +15,9 @@ shader_program::shader_program()
 	program_ = glCreateProgram();
 }
 
+shader_program::shader_program(bool)
+{ }
+
 bool shader_program::load_shader(shader_type&& type, const std::string& filename)
 {
 	std::string shader_text;
@@ -57,8 +60,44 @@ for (auto && ch : infoLog)\
 std::cout << static_cast<char>(ch);\
 std::cout << std::endl;}
 
-bool shader_program::compile_and_link_shaders()
+bool shader_program::compile_and_link_shaders(const bool pipeline)
 {
+	if (!pipeline)
+	{
+		const GLuint compute_shader = glCreateShader(GL_COMPUTE_SHADER);
+
+		const GLchar *compute_text = shaders_[COMPUTE].c_str();
+		const GLint compute_length = shaders_[COMPUTE].length();
+		glShaderSource(compute_shader, 1, &compute_text, &compute_length);
+		glCompileShader(compute_shader);
+
+		GLint compiled;
+
+		glGetObjectParameterivARB(compute_shader, GL_COMPILE_STATUS, &compiled);
+		if (!compiled)
+		{
+			CHECK_SHADER_LOG(compute_shader, "compute shader:");
+			return false;
+		}
+		std::cout << "Compute shader loaded." << std::endl;
+
+		glAttachShader(program_, compute_shader);
+		glLinkProgram(program_);
+
+		GLint linked;
+		glGetProgramiv(program_, GL_LINK_STATUS, &linked);
+
+		if (!linked)
+		{
+			CHECK_PROGRAM_LOG(program_, "program linking:");
+			return false;
+		}
+
+		glDeleteShader(compute_shader);
+
+		return true;
+	}
+
 	if (shaders_.find(VERTEX) == shaders_.end() || shaders_.find(FRAGMENT) == shaders_.end())
 	{
 		// TODO: log error
@@ -139,6 +178,7 @@ bool shader_program::compile_and_link_shaders()
 	glDeleteShader(fragment_shader);
 	if (has_geometry_shader)
 		glDeleteShader(geometry_shader);
+	// TODO: unload shaders
 
 	return true;
 }
@@ -163,7 +203,7 @@ GLuint shader_program::get_id() const
 	return program_;
 }
 
-void shader_program::update(const std::shared_ptr<environment>& env_ptr, const bool first) const
+void shader_program::update(const std::shared_ptr<environment>& env_ptr, const bool first, const int width, const int height) const
 {
 	glUseProgram(program_);
 
@@ -177,6 +217,12 @@ void shader_program::update(const std::shared_ptr<environment>& env_ptr, const b
 	const auto projection_matrix = env_ptr->get_camera().get_projection_matrix();
 	const auto view_projection_matrix = projection_matrix * view_matrix;
 	glUniformMatrix4fv(projection_view_matrix_loc, 1, GL_FALSE, &view_projection_matrix[0][0]);
+
+	const auto window_width_loc = glGetUniformLocation(program_, "windowWidth");
+	glUniform1i(window_width_loc, width);
+
+	const auto window_height_loc = glGetUniformLocation(program_, "windowHeight");
+	glUniform1i(window_height_loc, height);
 
 	if (first)
 	{

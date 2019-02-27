@@ -77,7 +77,7 @@ vec3 sample_uniform()
 	float r = sqrt(1.0f - r1 * r1);
     float phi = 2 * PI * r2;
  
-    return vec3(cos(phi) * r, sin(phi) * r, r1);
+    return vec3(cos(phi) * r, r1, sin(phi) * r);
 }
 
 float shadowing_schlick(float d)
@@ -146,7 +146,7 @@ vec3 sample_diffuse(int k)
 	vec3 wo = normalize(lightPositions[k] - position.xyz);
 	float distance = length(lightPositions[k] - position.xyz);
 	
-	return  (diffuse_color / PI * lightColors[k] * dot(normal, wo) * lightIntensities[k]) / (distance * distance);
+	return (diffuse_color / PI * lightColors[k] * dot(normal, wo) * lightIntensities[k]) / (distance * distance);
 }
 
 vec2 ray_to_uv(vec3 direction)

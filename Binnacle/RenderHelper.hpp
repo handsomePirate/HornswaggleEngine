@@ -1,6 +1,7 @@
 #pragma once
 #include <glm/detail/type_vec3.hpp>
 #include <glm/gtc/quaternion.hpp>
+#include "Texture.hpp"
 
 #define FRAMERATE_STEP 1 / 60.0f
 
@@ -33,3 +34,5 @@ struct instance_handle
 private:
 	model_instance *mi_;
 };
+
+static GLuint filter_texture(GLuint texture, const std::string& fragment, unsigned int in_width, unsigned int in_height, unsigned int out_width, unsigned int out_height);

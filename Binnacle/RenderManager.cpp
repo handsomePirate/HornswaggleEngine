@@ -5,12 +5,14 @@
 
 #include "RenderManager.hpp"
 #include "RenderHelper.hpp"
+#include "OpenGLRenderer.hpp"
+#include "GPUPathTracer.hpp"
 
 render_manager::render_manager()
 	: window_(nullptr), valid_(false), should_end_(false), width_(0), height_(0), window_visible_(false) {}
 
 render_manager::render_manager(const bool fullscreen, int samples, const int major_version, const int minor_version, const int width, const int height, const std::string& window_text, std::string& root_path, const bool window_visible)
-	: valid_(true), should_end_(false), width_(width), height_(height), window_visible_(window_visible)
+	: window_(nullptr), valid_(true), should_end_(false), width_(width), height_(height), window_visible_(window_visible)
 {
 	if (!window_visible)
 		samples = 1;
@@ -117,7 +119,7 @@ bool render_manager::is_valid() const
 
 float render_manager::get_aspect_ratio() const
 {
-	return width_ / height_;
+	return width_ / float(height_);
 }
 
 int render_manager::create_shader_program(const std::string& vertex_shader_file,
@@ -128,7 +130,7 @@ int render_manager::create_shader_program(const std::string& vertex_shader_file,
 	const std::string shaders_path = path_manipulator_->get_full_path("shaders");
 
 	std::cout << "Shaders: " << vertex_shader_file << ", " << fragment_shader_file;
-	if (geometry_shader_file.empty())
+	if (!geometry_shader_file.empty())
 		std::cout << ", " << geometry_shader_file;
 	std::cout << std::endl;
 
@@ -157,15 +159,52 @@ int render_manager::create_shader_program(const std::string& vertex_shader_file,
 	return shp.get_id();
 }
 
-void render_manager::init_renderer()
+int render_manager::create_compute_shader(const std::string& compute_shader_file) const
+{
+	auto cmp_shd = shader_program();
+
+	const std::string shaders_path = path_manipulator_->get_full_path("shaders");
+
+	if (!cmp_shd.load_shader(COMPUTE, shaders_path + compute_shader_file))
+		std::cout << "Cannot open or read from " << compute_shader_file << "!" << std::endl;
+	if (!cmp_shd.compile_and_link_shaders(false))
+	{
+		// TODO: exchange for a logger
+		std::cout << "Error: shader problem!" << std::endl;
+	}
+
+	(*shd_ptr_)[cmp_shd.get_id()] = cmp_shd;
+
+	return cmp_shd.get_id();
+}
+
+void render_manager::init_opengl_renderer()
+{
+	// TODO: scratch last renderer instance (and the scene, ...)
+	if (valid_)
+	{
+		// TODO: make a list of required shaders
+		quad_shader_program_ = create_shader_program("quad_vertex.glsl", "quad_fragment.glsl", "quad_geometry.glsl");
+		rnd_ptr_ = std::make_unique<opengl_renderer>(quad_shader_program_);
+		mod_ptr_ = std::make_unique<std::map<int, model>>();
+		ins_ptr_ = std::make_unique<std::map<int, std::vector<int>>>();
+		scn_ptr_ = std::make_shared<scene>();
+		init_environment(create_shader_program("vertex.glsl", "fragment_env_cube.glsl"), create_shader_program("vertex_lights.glsl", "fragment_lights.glsl"));
+	}
+}
+
+void render_manager::init_path_tracer()
 {
 	if (valid_)
 	{
-		rnd_ptr_ = std::make_unique<renderer>();
+		quad_shader_program_ = create_shader_program("quad_vertex.glsl", "quad_fragment.glsl", "quad_geometry.glsl");
+		GLuint path_tracer_program = create_compute_shader("path_trace_compute.glsl");
+
+		rnd_ptr_ = std::make_unique<gpu_path_tracer>(quad_shader_program_, path_tracer_program, width_, height_);
 		mod_ptr_ = std::make_unique<std::map<int, model>>();
 		ins_ptr_ = std::make_unique<std::map<int, std::vector<int>>>();
-		init_scene();
-		init_environment(create_shader_program("vertex.glsl", "fragment_env_cube.glsl"), create_shader_program("vertex_lights.glsl", "fragment_lights.glsl"));
+		scn_ptr_ = std::make_shared<scene>();
+		env_ptr_ = std::make_shared<environment>(camera());
 	}
 }
 
@@ -234,7 +273,8 @@ unsigned char *render_manager::render_to_texture(const bool screen) const
 
 	rnd_ptr_->render(scn_ptr_, mat_ptr_, env_ptr_);
 
-	const auto image_data = new rgba[texture_width_ * texture_height_];
+	const auto image_data_size = texture_width_ * texture_height_;
+	const auto image_data = new rgba[image_data_size];
 	glReadPixels(0, 0, texture_width_, texture_height_, GL_RGBA, GL_UNSIGNED_BYTE, reinterpret_cast<unsigned char *>(&image_data[0]));
 	
 	reorder_pixels(&image_data[0], texture_width_, texture_height_);
@@ -245,6 +285,17 @@ unsigned char *render_manager::render_to_texture(const bool screen) const
 	glViewport(0, 0, width_, height_);
 
 	return reinterpret_cast<unsigned char *>(image_data);
+}
+
+GLuint render_manager::filter(const std::string& fragment, const GLuint tex, const unsigned int in_width, const unsigned int in_height,
+	const unsigned int out_width, const unsigned int out_height) const
+{
+	//const auto program = create_shader_program("filter_vertex.glsl", fragment);
+	//const auto filtered = rnd_ptr_->filter(program, tex, in_width, in_height, out_width, out_height);
+	////glDeleteProgram(program);
+	//glViewport(0, 0, width_, height_);
+	//return filtered;
+	return 0;
 }
 
 void render_manager::set_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, const float fov, const float aspect, const float z_near, const float z_far) const
@@ -263,7 +314,7 @@ camera& render_manager::get_camera() const
 	return env_ptr_->get_camera();
 }
 
-void render_manager::set_background_color(const glm::vec3& color)
+void render_manager::set_background_color(const glm::vec3& color) const
 {
 	rnd_ptr_->set_background_color(color);
 }
@@ -482,7 +533,10 @@ void render_manager::load_environment_cube_map(const std::string& neg_z, const s
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	env_ptr_->set_environment_map(tex_id);
+	const float ratio = width / float(height);
+	const auto diffuse_id = filter("environment_diffuse_filter.glsl", tex_id, width, height, ratio * 64, 64);
+
+	env_ptr_->set_environment_map(tex_id, diffuse_id);
 	rnd_ptr_->enable(vizualization::ENVIRONMENT_MAP);
 	//glUseProgram(env_ptr_->get_cube_shader_program());
 	//glActiveTexture(GL_TEXTURE31);
@@ -490,13 +544,14 @@ void render_manager::load_environment_cube_map(const std::string& neg_z, const s
 
 }
 
-void render_manager::load_hdr_environment(const std::string & hdr_img_file) const
+void render_manager::load_hdr_environment(const std::string& hdr_img_file, int width, int height, const std::string& ldr_diffuse_file) const
 {
 	// TODO: delete previous environment maps
 	if (!env_ptr_)
 		return;
 
 	const std::string hdr_path = path_manipulator_->get_full_path("hdr_textures");
+	const std::string ldr_path = path_manipulator_->get_full_path("ldr_textures");
 
 	GLuint tex_id;
 	glGenTextures(1, &tex_id);
@@ -514,7 +569,36 @@ void render_manager::load_hdr_environment(const std::string & hdr_img_file) cons
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	env_ptr_->set_environment_map(tex_id);
+	GLuint diffuse_id;
+	if (ldr_diffuse_file.empty())
+	{
+		const unsigned int diffuse_size = 64;
+		const float ratio = width / float(height);
+		const unsigned int diff_width = diffuse_size * ratio;
+		diffuse_id = filter("environment_diffuse_filter.glsl", tex_id, width, height, diff_width, diffuse_size);
+	}
+	else
+	{
+		unsigned char *image = SOIL_load_image((ldr_path + ldr_diffuse_file).c_str(), &width, &height, nullptr, SOIL_LOAD_RGB);
+
+		glGenTextures(1, &diffuse_id);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, diffuse_id);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+
+		SOIL_free_image_data(image);
+	}
+
+	env_ptr_->set_environment_map(tex_id, diffuse_id);
 	rnd_ptr_->enable(vizualization::ENVIRONMENT_MAP);
 }
 
@@ -569,6 +653,10 @@ float render_manager::update()
 				get_camera().translate(0.0f, -speed, 0.0f);
 			if (keys_manager_[GLFW_KEY_M] || keys_manager_[GLFW_KEY_DOWN])
 				delete render_to_texture();
+			if (keys_manager_[GLFW_KEY_EQUAL])
+				get_camera().set_fov(get_camera().get_fov() + .01);
+			if (keys_manager_[GLFW_KEY_MINUS])
+				get_camera().set_fov(get_camera().get_fov() - .01);
 
 			if (reset_camera_)
 			{
@@ -588,7 +676,7 @@ float render_manager::update()
 		const bool first = env_ptr_->changed();
 		env_ptr_->unset_changed();
 		for (auto && shd : *shd_ptr_)
-			shd.second.update(env_ptr_, first);
+			shd.second.update(env_ptr_, first, width_, height_);
 	}
 
 	return time_elapsed;
@@ -608,12 +696,6 @@ void render_manager::render() const
 bool render_manager::should_end() const
 {
 	return should_end_;
-}
-
-void render_manager::init_scene()
-{
-	if (valid_)
-		scn_ptr_ = std::make_shared<scene>();
 }
 
 void render_manager::create_paths(std::string& root_path)
@@ -642,6 +724,7 @@ void render_manager::key_callback(GLFWwindow* window, const int key, const int s
 		std::cout << "vertex count: " << vertex_count_ << std::endl;
 		std::cout << "poly count: " << poly_count_ << std::endl;
 		std::cout << "FPS: " << get_fps() << std::endl;
+		std::cout << "fov: " << get_camera().get_fov() << std::endl;
 	}
 }
 
@@ -676,6 +759,9 @@ void render_manager::window_resize_callback(GLFWwindow* window, const int width,
 	width_ = width;
 	height_ = height;
 
+	if (valid_ && rnd_ptr_)
+		rnd_ptr_->change_viewport_size(width, height);
+
 	glViewport(0, 0, width, height);
 }
 
@@ -704,6 +790,7 @@ void render_manager::reorder_pixels(rgba *pixels, const size_t width, const size
 
 render_manager::~render_manager()
 {
+	glfwDestroyWindow(window_);
 	if (valid_)
 		glfwTerminate();
 	//TODO: delete buffer, etc.

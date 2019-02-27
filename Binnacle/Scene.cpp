@@ -246,6 +246,16 @@ void camera::set_transform_focus(glm::vec3&& p, glm::vec3&& f, glm::vec3&& u)
 	set_transform_focus(p, f, u);
 }
 
+glm::vec3 camera::get_forward() const
+{
+	return normalize(focus_ - glm::vec3(position_));
+}
+
+glm::vec3 camera::get_aside() const
+{
+	return normalize(cross(get_forward(), up_)); // TODO: check if the normalization is necessary
+}
+
 void camera::set_aspect(const float aspect)
 {
 	aspect_ = aspect;
@@ -272,7 +282,7 @@ void camera::set_fov(const float fov)
 	fov_ = fov;
 }
 
-void camera::set_frustum(float fov, float aspect, float z_near, float z_far)
+void camera::set_frustum(const float fov, const float aspect, const float z_near, const float z_far)
 {
 	fov_ = fov;
 	aspect_ = aspect;
@@ -305,6 +315,26 @@ float camera::get_fov() const
 	return fov_;
 }
 
+glm::vec3 camera::get_top_left_ray(const int width, const int height) const
+{
+	return glm::vec3();
+}
+
+glm::vec3 camera::get_top_right_ray(const int width, const int height) const
+{
+	return glm::vec3();
+}
+
+glm::vec3 camera::get_bottom_left_ray(const int width, const int height) const
+{
+	return glm::vec3();
+}
+
+glm::vec3 camera::get_bottom_right_ray(const int width, const int height) const
+{
+	return glm::vec3();
+}
+
 const glm::mat4& camera::get_view_matrix() const
 {
 	return view_matrix_;
@@ -313,6 +343,11 @@ const glm::mat4& camera::get_view_matrix() const
 const glm::mat4& camera::get_projection_matrix() const
 {
 	return projection_matrix_;
+}
+
+glm::mat4 camera::get_view_projection_inverse_matrix() const
+{
+	return inverse(projection_matrix_ * view_matrix_);
 }
 
 void camera::create_matrices()
@@ -349,8 +384,13 @@ float light::get_intensity() const
 	return intensity_;
 }
 
+environment::environment(camera& cam)
+	: camera_(cam), environment_map_hdr_(0), environment_map_diffuse_(0), cube_program_(0), lights_program_(0)
+{ }
+
 environment::environment(camera& cam, const GLuint env_cube_program, const GLuint lights_program)
-	: camera_(cam), environment_map_hdr_(0), cube_program_(env_cube_program), lights_program_(lights_program)
+	: camera_(cam), environment_map_hdr_(0), environment_map_diffuse_(0), cube_program_(env_cube_program),
+	  lights_program_(lights_program)
 {
 	std::vector<vertex> vertices(8);
 	std::vector<unsigned int> indices(36);
@@ -364,20 +404,49 @@ environment::environment(camera& cam, const GLuint env_cube_program, const GLuin
 	vertices[6] = vertex(glm::vec4(.5f, .5f, -.5f, 1), normalize(glm::vec3(-.5f, -.5f, .5f)));
 	vertices[7] = vertex(glm::vec4(-.5f, .5f, -.5f, 1), normalize(glm::vec3(.5f, -.5f, .5f)));
 
-	indices[0] = 4; indices[1] = 3; indices[2] = 7;
-	indices[3] = 3; indices[4] = 4; indices[5] = 0;
-	indices[6] = 5; indices[7] = 0; indices[8] = 4;
-	indices[9] = 0; indices[10] = 5; indices[11] = 1;
-	indices[12] = 6; indices[13] = 1; indices[14] = 5;
-	indices[15] = 1; indices[16] = 6; indices[17] = 2;
-	indices[18] = 7; indices[19] = 2; indices[20] = 6;
-	indices[21] = 2; indices[22] = 7; indices[23] = 3;
-	indices[24] = 1; indices[25] = 3; indices[26] = 0;
-	indices[27] = 3; indices[28] = 1; indices[29] = 2;
-	indices[30] = 7; indices[31] = 5; indices[32] = 4;
-	indices[33] = 5; indices[34] = 7; indices[35] = 6;
+	indices[0] = 4;
+	indices[1] = 3;
+	indices[2] = 7;
+	indices[3] = 3;
+	indices[4] = 4;
+	indices[5] = 0;
+	indices[6] = 5;
+	indices[7] = 0;
+	indices[8] = 4;
+	indices[9] = 0;
+	indices[10] = 5;
+	indices[11] = 1;
+	indices[12] = 6;
+	indices[13] = 1;
+	indices[14] = 5;
+	indices[15] = 1;
+	indices[16] = 6;
+	indices[17] = 2;
+	indices[18] = 7;
+	indices[19] = 2;
+	indices[20] = 6;
+	indices[21] = 2;
+	indices[22] = 7;
+	indices[23] = 3;
+	indices[24] = 1;
+	indices[25] = 3;
+	indices[26] = 0;
+	indices[27] = 3;
+	indices[28] = 1;
+	indices[29] = 2;
+	indices[30] = 7;
+	indices[31] = 5;
+	indices[32] = 4;
+	indices[33] = 5;
+	indices[34] = 7;
+	indices[35] = 6;
 
 	cube_ = model(vertices, indices);
+}
+
+environment::~environment()
+{
+	// TODO: delete textures
 }
 
 camera& environment::get_camera()
@@ -405,9 +474,10 @@ const std::vector<vertex>& environment::get_light_visuals() const
 	return light_visuals_;
 }
 
-void environment::set_environment_map(const GLuint hdr_id)
+void environment::set_environment_map(const GLuint hdr_id, const GLuint diffuse_id)
 {
 	environment_map_hdr_ = hdr_id;
+	environment_map_diffuse_ = diffuse_id;
 }
 
 void environment::shader_load_env_map(const GLuint program) const
@@ -417,6 +487,12 @@ void environment::shader_load_env_map(const GLuint program) const
 
 	const auto hdr_loc = glGetUniformLocation(program, "environment_map");
 	glUniform1i(hdr_loc, 31);
+
+	glActiveTexture(GL_TEXTURE30);
+	glBindTexture(GL_TEXTURE_2D, environment_map_diffuse_);
+
+	const auto diffuse_loc = glGetUniformLocation(program, "environment_map_diffuse");
+	glUniform1i(diffuse_loc, 30);
 }
 
 bool environment::changed() const

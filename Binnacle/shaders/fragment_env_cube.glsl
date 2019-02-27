@@ -46,8 +46,8 @@ void main(void)
 	float cos_theta = direction.y;
 	float theta = acos(cos_theta);
 
-	if (direction.x == 0)
-		direction.x = 0.001;
+	//if (direction.x == 0)
+	//	direction.x = 0.001;
 
 	float tan_phi = direction.z / direction.x;
 	float phi = atan(tan_phi);
@@ -55,7 +55,7 @@ void main(void)
 	if (direction.x < 0)
 		phi += PI;
 
-	phi += PI / 2;
+	//phi += PI / 2;
 
 	float map_x = (phi) / (2 * PI);
 	float map_y = theta / PI;

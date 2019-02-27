@@ -21,30 +21,28 @@ enum class vizualization
 // The object that takes care of rasterazing the scene
 struct renderer
 {
-	renderer();
+	explicit renderer(GLuint texture_draw_program);
 	renderer(const renderer& rm) = delete;
 	renderer& operator=(const renderer& rm) = delete;
-	renderer(renderer && rm) = default;
-	renderer& operator=(renderer && rm) = default;
+	renderer(renderer && rm) = delete;
+	renderer& operator=(renderer && rm) = delete;
 	virtual ~renderer() = default;
 
-	void render(const std::shared_ptr<scene>& scn_ptr, 
+	virtual void render(const std::shared_ptr<scene>& scn_ptr, 
 		const std::shared_ptr<std::map<int, material>>& mat_ptr, 
-		const std::shared_ptr<environment>& env_ptr) const;
+		const std::shared_ptr<environment>& env_ptr) const = 0;
 
-	void enable(const vizualization& option) const;
-	void disable(const vizualization& option) const;
+	virtual void enable(const vizualization& option) const = 0;
+	virtual void disable(const vizualization& option) const = 0;
 
-	bool is_enabled(const vizualization& option) const;
+	virtual bool is_enabled(const vizualization& option) const = 0;
 
-	void set_buffer_attrib(const buffer_attrib& option) const;
-	void set_background_color(const glm::vec3& color);
+	virtual void set_background_color(const glm::vec3& color) = 0;
 
+	virtual void change_viewport_size(unsigned int width, unsigned int height) = 0;
+
+	void render_texture(GLuint tex) const;
 private:
-	GLuint vbo_{};
-	GLuint vao_{};
-	GLuint vio_{};
-
-	bool *vizualization_options_;
-	glm::vec3 background_color_;
+	GLuint texture_draw_program_;
+	GLuint quad_vbo_{};
 };

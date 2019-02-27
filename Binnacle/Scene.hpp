@@ -66,6 +66,9 @@ struct camera
 	void set_transform_forward(glm::vec3&& p, glm::vec3&& f, glm::vec3&& u);
 	void set_transform_focus(glm::vec3&& p, glm::vec3&& f, glm::vec3&& u);
 
+	glm::vec3 get_forward() const;
+	glm::vec3 get_aside() const;
+
 	void set_aspect(float aspect);
 	void set_near_far(float z_near, float z_far);
 	void set_near(float z_near);
@@ -81,8 +84,14 @@ struct camera
 	float get_far() const;
 	float get_fov() const;
 
+	glm::vec3 get_top_left_ray(int width, int height) const;
+	glm::vec3 get_top_right_ray(int width, int height) const;
+	glm::vec3 get_bottom_left_ray(int width, int height) const;
+	glm::vec3 get_bottom_right_ray(int width, int height) const;
+
 	const glm::mat4& get_view_matrix() const;
 	const glm::mat4& get_projection_matrix() const;
+	glm::mat4 get_view_projection_inverse_matrix() const;
 
 	void create_matrices();
 private:
@@ -258,7 +267,9 @@ private:
 
 struct environment
 {
-	explicit environment(camera& cam, GLuint env_cube_program, GLuint lights_program);
+	explicit environment(camera& cam);
+	environment(camera& cam, GLuint env_cube_program, GLuint lights_program);
+	~environment();
 	camera& get_camera();
 
 	template <class ... T>
@@ -274,7 +285,7 @@ struct environment
 
 	const std::vector<vertex>& get_light_visuals() const;
 
-	void set_environment_map(GLuint hdr_id);
+	void set_environment_map(GLuint hdr_id, GLuint diffuse_id);
 
 	void shader_load_env_map(GLuint program) const;
 	bool changed() const;
@@ -292,6 +303,7 @@ private:
 	camera camera_;
 
 	GLuint environment_map_hdr_;
+	GLuint environment_map_diffuse_;
 
 	model cube_;
 	GLuint cube_program_;

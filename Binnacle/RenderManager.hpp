@@ -12,14 +12,7 @@
 #include <GLFW/glfw3.h>
 #include "PathManipulator.hpp"
 
-// The pixel form structure
-struct rgba
-{
-	unsigned char r;
-	unsigned char g;
-	unsigned char b;
-	unsigned char a;
-};
+//#define ENABLE_PATH_TRACING
 
 // Serves the purpose of maintaining the renderer to use, the scene to render and the window to render to
 struct render_manager
@@ -39,7 +32,9 @@ struct render_manager
 
 	// Assemble the shader program to use from source files
 	int create_shader_program(const std::string& vertex_shader_file, const std::string& fragment_shader_file, const std::string& geometry_shader_file = "") const;
-	void init_renderer();
+	int create_compute_shader(const std::string& compute_shader_file) const;
+	void init_opengl_renderer();
+	void init_path_tracer();
 
 	// Append/Clear&Append new light sources
 	template<class ...T>
@@ -55,10 +50,12 @@ struct render_manager
 	void init_texture_rendering(int width, int height);
 	unsigned char *render_to_texture(bool screen = false) const;
 
+	GLuint filter(const std::string& fragment, GLuint tex, unsigned int in_width, unsigned int in_height, unsigned int out_width, unsigned int out_height) const;
+
 	void set_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, float fov, float aspect, float z_near, float z_far) const;
 	camera& get_camera() const;
 
-	void set_background_color(const glm::vec3& color);
+	void set_background_color(const glm::vec3& color) const;
 
 	// Load an OBJ model from a file (returns its assigned id)
 	int load_model(const std::string& filename_model, bool smooth, int mat_id = -1);
@@ -91,11 +88,11 @@ struct render_manager
 	void delete_material(int index);
 
 	// Load an environment cube map from six images
-	void load_environment_cube_map(const std::string& neg_z, const std::string& pos_z, 
-								   const std::string& neg_x, const std::string& pos_x, 
-								   const std::string& neg_y, const std::string& pos_y) const;
+	void load_environment_cube_map(const std::string& neg_z, const std::string& pos_z,
+		const std::string& neg_x, const std::string& pos_x,
+		const std::string& neg_y, const std::string& pos_y) const;
 
-	void load_hdr_environment(const std::string& hdr_img_file) const;
+	void load_hdr_environment(const std::string& hdr_img_file, int width, int height, const std::string& ldr_diffuse_file = "") const;
 
 	// Press the timer
 	void start_framerate();
@@ -108,7 +105,6 @@ struct render_manager
 	// OpenGL needs to terminate the window or the user requests it
 	bool should_end() const;
 private:
-	void init_scene();
 	void create_paths(std::string& root_path);
 
 	template<class ...T>
@@ -126,17 +122,18 @@ private:
 
 	static void reorder_pixels(rgba *pixels, size_t width, size_t height);
 
+	GLFWwindow *window_; // TODO: needs init and destruct
+
 	std::unique_ptr<renderer> rnd_ptr_;
 	std::shared_ptr<scene> scn_ptr_;
 	std::shared_ptr<environment> env_ptr_;
 
-	GLFWwindow *window_; // TODO: needs init and destruct
 	bool valid_;
 
 	bool should_end_;
 
-	float width_;
-	float height_;
+	int width_;
+	int height_;
 
 	std::unique_ptr<std::map<int, std::vector<int>>> ins_ptr_;
 
@@ -176,6 +173,8 @@ private:
 	GLuint texture_fbo_ = 0;
 	GLuint rendered_texture_{};
 	GLuint depth_render_buffer_{};
+
+	GLuint quad_shader_program_{};
 
 	int texture_width_{};
 	int texture_height_{};

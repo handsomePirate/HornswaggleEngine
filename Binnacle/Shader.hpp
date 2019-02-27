@@ -12,6 +12,7 @@ enum shader_type
 	VERTEX,
 	FRAGMENT,
 	GEOMETRY,
+	COMPUTE,
 	// and others
 };
 
@@ -28,14 +29,15 @@ struct shader
 struct shader_program
 {
 	shader_program();
+	explicit shader_program(bool);
 	bool load_shader(shader_type&& type, const std::string& filename);
-	bool compile_and_link_shaders();
+	bool compile_and_link_shaders(bool pipeline = true);
 
 	bool validate() const;
 
 	GLuint get_id() const;
 
-	void update(const std::shared_ptr<environment>& env_ptr, bool first) const;
+	void update(const std::shared_ptr<environment>& env_ptr, bool first, int width, int height) const;
 private:
 	std::unordered_map<shader_type, std::string> shaders_;
 	GLuint program_;

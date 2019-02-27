@@ -50,7 +50,7 @@ BINNACLE_API int binnacle_create_shader_program(binnacle_ptr binnacle, const std
 
 BINNACLE_API void binnacle_init_renderer(binnacle_ptr binnacle)
 {
-	reinterpret_cast<render_manager *>(binnacle)->init_renderer();
+	reinterpret_cast<render_manager *>(binnacle)->init_opengl_renderer();
 }
 
 BINNACLE_API int binnacle_load_model_data(binnacle_ptr binnacle, float *vertex_positions, const size_t vertex_count, unsigned int* indices, size_t const index_count,
