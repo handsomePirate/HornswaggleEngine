@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <memory>
 #include <string>
 #include <map>
@@ -12,7 +12,8 @@
 #include <GLFW/glfw3.h>
 #include "PathManipulator.hpp"
 
-//#define ENABLE_PATH_TRACING
+#define ENABLE_DEBUG_CONTEXT
+#undef ENABLE_DEBUG_CONTEXT
 
 // Serves the purpose of maintaining the renderer to use, the scene to render and the window to render to
 struct render_manager

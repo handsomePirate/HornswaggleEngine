@@ -10,12 +10,14 @@ uniform vec3 ray10;
 uniform vec3 ray11;
 //================================================================================
 
+uniform vec3 backColor;
 uniform int time;
 
-const int bounces = 3;
+const int bounces = 6;
 
 ivec2 pix;
 #define PI 3.14159265358979323846
+#define OneOverPI 0.31830988618379067153
 
 //===========================PRIMITIVE==DEFINITIONS===============================
 struct material
@@ -26,18 +28,17 @@ struct material
 	vec3 color;
 };
 
-struct sphere
+struct vertex
 {
-	vec3 center;
-	float radius;
-
-	material mat;
+	vec3 position;
+	vec3 normal;
 };
 
-struct box 
+struct triangle
 {
-	vec3 min;
-	vec3 max;
+	vertex v1;
+	vertex v2;
+	vertex v3;
 
 	material mat;
 };
@@ -49,47 +50,65 @@ struct light
 	vec3 color;
 };
 
+#define CULL_BACKFACES
+//#undef CULL_BACKFACES
+
 #define MAX_SCENE_BOUNDS 100.0
+
 #define BOX_COUNT 1
-#define SPHERE_COUNT 1
+
+#define TRIANGLE_COUNT 2 + BOX_COUNT * 12
+
 #define LIGHT_COUNT 2
 
-const box boxes[] = 
+#define BOX(x1, y1, z1, x2, y2, z2, mat)\
+{{vec3(x1, y1, z2), vec3(0, 0, 1)}, {vec3(x2, y1, z2), vec3(0, 0, 1)}, {vec3(x1, y2, z2), vec3(0, 0, 1)}, mat},\
+{{vec3(x1, y2, z2), vec3(0, 0, 1)}, {vec3(x2, y1, z2), vec3(0, 0, 1)}, {vec3(x2, y2, z2), vec3(0, 0, 1)}, mat},\
+{{vec3(x2, y1, z2), vec3(1, 0, 0)}, {vec3(x2, y1, z1), vec3(1, 0, 0)}, {vec3(x2, y2, z2), vec3(1, 0, 0)}, mat},\
+{{vec3(x2, y2, z2), vec3(1, 0, 0)}, {vec3(x2, y1, z1), vec3(1, 0, 0)}, {vec3(x2, y2, z1), vec3(1, 0, 0)}, mat},\
+{{vec3(x2, y1, z1), vec3(0, 0, -1)}, {vec3(x1, y1, z1), vec3(0, 0, -1)}, {vec3(x2, y2, z1), vec3(0, 0, -1)}, mat},\
+{{vec3(x2, y2, z1), vec3(0, 0, -1)}, {vec3(x1, y1, z1), vec3(0, 0, -1)}, {vec3(x1, y2, z1), vec3(0, 0, -1)}, mat},\
+{{vec3(x1, y1, z1), vec3(-1, 0, 0)}, {vec3(x1, y1, z2), vec3(-1, 0, 0)}, {vec3(x1, y2, z1), vec3(-1, 0, 0)}, mat},\
+{{vec3(x1, y2, z1), vec3(-1, 0, 0)}, {vec3(x1, y1, z2), vec3(-1, 0, 0)}, {vec3(x1, y2, z2), vec3(-1, 0, 0)}, mat},\
+{{vec3(x1, y1, z2), vec3(0, -1, 0)}, {vec3(x2, y1, z2), vec3(0, -1, 0)}, {vec3(x1, y1, z1), vec3(0, -1, 0)}, mat},\
+{{vec3(x1, y1, z1), vec3(0, -1, 0)}, {vec3(x2, y1, z2), vec3(0, -1, 0)}, {vec3(x2, y1, z1), vec3(0, -1, 0)}, mat},\
+{{vec3(x1, y2, z2), vec3(0, 1, 0)}, {vec3(x2, y2, z2), vec3(0, 1, 0)}, {vec3(x1, y2, z1), vec3(0, 1, 0)}, mat},\
+{{vec3(x1, y2, z1), vec3(0, 1, 0)}, {vec3(x2, y2, z2), vec3(0, 1, 0)}, {vec3(x2, y2, z1), vec3(0, 1, 0)}, mat}
+
+const triangle triangles[] = 
 {
-	/* The ground */
-	{vec3(-5.0, -0.5, -5.0), vec3(5.0, 0.0, 5.0), {0.7, 0, vec3(1, 0, 0)}},
-	/* Box in the middle */
-	{vec3(-0.5, 0.0, -0.5), vec3(0.5, 1.0, 0.5), {0.2, 1, vec3(0.2, 0, 0.5)}}
+	{{vec3(-5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(-5, 0, -5), vec3(0, 1, 0)}, {0.01, 0, vec3(1, 1, 1)}},
+	{{vec3(-5, 0, -5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, -5), vec3(0, 1, 0)}, {0.01, 0, vec3(1, 1, 1)}},
+	BOX(-0.5, 0, -0.5, 0.5, 1, 0.5, material(0.2, 0, vec3(1, 0.2, 0.2))),
 };
 
-const sphere spheres[] =
-{
-	{vec3(0, 0.5, 0), 0.5, {0.1, 1, vec3(0, 0.3, 1)}}
-};
+const int time_mod = 20000;
+const float time_div = time_mod / (2 * PI);
+
+const float first_light_location_value = (time % time_mod) / time_div + PI * 0.6;
+const float second_light_location_value = (time % time_mod) / time_div;
 
 const light lights[] =
 {
-	{vec3(cos(time / 10000.0 + PI * 0.75) * 4, 0.3, sin(time / 10000.0 + PI * 0.75) * 4), 32, vec3(1)},
-	{vec3(cos(time / 10000.0) * 3, 0.7, sin(time / 10000.0) * 3), 48, vec3(1)}
+	{vec3(cos(first_light_location_value) * 4, 0.3, sin(first_light_location_value) * 4), 16, vec3(0, 1, 0)},
+	{vec3(cos(second_light_location_value) * 3, 0.7, sin(second_light_location_value) * 3), 20, vec3(1)}
 };
 
-struct hitinfo 
+struct hitinfo
 {
-	vec2 delta;
-	int bi;
-	vec3 normal;
-	vec3 tangent;
+	vec3 hit;
 	material mat;
+	vec3 normal;
+
+	vec3 dir;
+	bool end;
 };
 
 struct traceinfo
 {
-	vec3 position;
-	vec3 direction;
-	vec4 color;
-	hitinfo h;
-	bool hit;
+	vec3 color;
 };
+
 //================================================================================
 
 //==================================RANDOM========================================
@@ -125,30 +144,33 @@ vec2 rand()
 //================================================================================
 
 //=======================PRIMITIVE==INTERSECTIONS=================================
-vec2 intersectBox(vec3 origin, vec3 dir, const box b) 
+
+float intersectTriangle(vec3 origin, vec3 dir, int i)
 {
-	vec3 tMin = (b.min - origin) / dir;
-	vec3 tMax = (b.max - origin) / dir;
-	vec3 t1 = min(tMin, tMax);
-	vec3 t2 = max(tMin, tMax);
-	float tNear = max(max(t1.x, t1.y), t1.z);
-	float tFar = min(min(t2.x, t2.y), t2.z);
-	return vec2(tNear, tFar);
-}
+	vec3 e1 = triangles[i].v2.position - triangles[i].v1.position;
+    vec3 e2 = triangles[i].v3.position - triangles[i].v1.position;
+    vec3 p = cross(dir, e2);
+    float a = dot(e1, p);
 
-vec2 intersectSphere(vec3 origin, vec3 dir, const sphere s)
-{
-	vec3 toCenter = s.center - origin;
-	float cosa = dot(normalize(toCenter), dir);
+    if(a == 0)
+        return -1;
 
-	float a = length(toCenter);
-	float a2 = a * a;
-	float c2 = s.radius * s.radius;
+    float f = 1.0f / a;
 
-	float fir = a * cosa;
-	float sec = sqrt(a * a * cosa * cosa - a2 + c2);
+    vec3 s = origin - triangles[i].v1.position;
+    float u = f * dot(s, p);
+    if(u < 0.0f || u > 1.0f)
+        return -2;
 
-	return vec2(fir - sec, fir + sec);
+    vec3 q = cross(s, e1);
+    float v = f * dot(dir, q);
+
+    if(v < 0.0f || u + v > 1.0f)
+        return -3;
+
+    float res = f * dot(e2, q);
+
+    return res;
 }
 
 vec3 compute_tangent(vec3 normal)
@@ -160,79 +182,75 @@ vec3 compute_tangent(vec3 normal)
 	return vec3(a, 0, b);
 }
 
+vec3 nearestLinePoint(vec3 b, vec3 a, vec3 v1)
+{
+	float nom = v1.x * (b.x - a.x) + v1.y * (b.y - a.y) + v1.z * (b.z - a.z);
+	float denom = v1.x * v1.x + v1.y * v1.y + v1.z * v1.z;
+
+	float k = nom / denom;
+
+	return a + k * v1;
+}
+
+float linePointDistance(vec3 b, vec3 a, vec3 v1)
+{
+	return length(nearestLinePoint(b, a, v1) - b);
+}
+
+float triangleArea(vec3 v1, vec3 v2, vec3 v3)
+{
+	return length(v1 - v2) * linePointDistance(v3, v1, v2 - v1) / 2.0f;
+}
+
+vec3 interpolateNormal(int i, vec3 hit)
+{
+	float area = triangleArea(triangles[i].v1.position, triangles[i].v2.position, triangles[i].v3.position);
+	float bar1 = triangleArea(triangles[i].v2.position, triangles[i].v3.position, hit) / area;
+	float bar2 = triangleArea(triangles[i].v3.position, triangles[i].v1.position, hit) / area;
+	float bar3 = 1 - bar1 - bar2;
+
+	return normalize(triangles[i].v1.normal * bar1 + triangles[i].v2.normal * bar2 + triangles[i].v3.normal * bar3);
+};
+
 const float margin = 0.01;
 bool intersectPrimitives(vec3 origin, vec3 dir, out hitinfo info) 
 {
 	float smallest = MAX_SCENE_BOUNDS;
 	bool found = false;
-	for (int i = 0; i < BOX_COUNT; ++i) 
+	
+	for (int i = 0; i < TRIANGLE_COUNT; ++i)
 	{
-		vec2 delta = intersectBox(origin, dir, boxes[i]);
-		if (delta.x > 0.0 && delta.x < delta.y && delta.x < smallest) 
-		{	
-			info.delta = delta;
-			info.bi = i;
-
-			vec3 inter = origin + delta.x * dir;
-			vec3 center = mix(boxes[i].min, boxes[i].max, 0.5);
-			info.normal = inter - center;
-
-			float rx = abs(info.normal.x) / (boxes[i].max.x - boxes[i].min.x) * 2;
-			float ry = abs(info.normal.y) / (boxes[i].max.y - boxes[i].min.y) * 2;
-			float rz = abs(info.normal.z) / (boxes[i].max.z - boxes[i].min.z) * 2;
-
-			float sx = abs(info.normal.x) / info.normal.x;
-			float sy = abs(info.normal.y) / info.normal.y;
-			float sz = abs(info.normal.z) / info.normal.z;
-			
-			if (abs(info.normal.x) * 2 + margin < boxes[i].max.x - boxes[i].min.x)
-				rx = 0;
-			if (abs(info.normal.y) * 2 + margin < boxes[i].max.y - boxes[i].min.y)
-				ry = 0;
-			if (abs(info.normal.z) * 2 + margin < boxes[i].max.z - boxes[i].min.z)
-				rz = 0;
-			
-			info.normal = vec3(sx * rx, sy * ry, sz * rz);
-
-			info.tangent = compute_tangent(info.normal);
-
-			info.mat = boxes[i].mat;
-
-			smallest = delta.x;
+		float t = intersectTriangle(origin, dir, i);
+		vec3 hit = origin + t * dir;
+		vec3 normal = interpolateNormal(i, hit);
+		
+		if (t > 0.01 && t < smallest 
+#ifdef CULL_BACKFACES
+		&& dot(-dir, normal) > 0
+#endif
+		)
+		{
+			info.hit = hit;
+			info.mat = triangles[i].mat;
+			info.normal = normal;
+			smallest = t;
 			found = true;
 		}
 	}
-	for (int i = 0; i < SPHERE_COUNT; ++i)
-	{
-		vec2 delta = intersectSphere(origin, dir, spheres[i]);
-		if (delta.x > 0.0 && delta.x < delta.y && delta.x < smallest) 
-		{	
-			info.delta = delta;
-			info.bi = i + BOX_COUNT;
-			info.normal = normalize(origin + (delta.x * dir) - spheres[i].center);
-			info.tangent = compute_tangent(info.normal);
-			info.mat = spheres[i].mat;
-			smallest = delta.x;
-			found = true;
-		}
-	}
+
 	return found;
 }
 
-bool CheckVisibility(vec3 origin, vec3 dir, float length, int bi)
+bool CheckVisibility(vec3 origin, vec3 dir, float length)
 {
-	for (int i = 0; i < BOX_COUNT; ++i)
+	for (int i = 0; i < TRIANGLE_COUNT; ++i)
 	{
-		vec2 delta = intersectBox(origin, dir, boxes[i]);
-		if (delta.x > margin && delta.x < length + margin) 
+		float t = intersectTriangle(origin, dir, i);
+		
+		if (t > 0.01 && t < length)
+		{
 			return false;
-	}
-
-	for (int i = 0; i < SPHERE_COUNT; ++i)
-	{
-		vec2 delta = intersectSphere(origin, dir, spheres[i]);
-		if (delta.x > margin && delta.x < length + margin) 
-			return false;
+		}
 	}
 
 	return true;
@@ -248,6 +266,17 @@ vec3 uniform_hemisphere_sample()
     float phi = 2 * PI * rv[1];
  
     return vec3(cos(phi) * r, rv[0], sin(phi) * r);
+}
+
+vec3 cosineSample()
+{
+	vec2 rv = rand();
+	float sin_theta = sqrt(rv[0]);   
+	float cos_theta = sqrt(1 - sin_theta * sin_theta);
+
+	float psi = rv[1] * 2 * PI;
+ 
+	return vec3(sin_theta * cos(psi), cos_theta, sin_theta * sin(psi));
 }
 
 vec3 halfvector_GGX_sample(float roughness)
@@ -268,6 +297,7 @@ vec3 halfvector_GGX_sample(float roughness)
 //================================================================================
 
 //==================================TRACE=========================================
+
 vec3 get_diffuse_color(material mat)
 {
 	return mix(mat.color, vec3(0), mat.metalness);
@@ -280,7 +310,7 @@ vec3 get_specular_color(material mat)
 
 float shadowing_schlick(float roughness, float d)
 {
-	float k = roughness * sqrt(2 / PI);
+	float k = roughness * sqrt(2 * OneOverPI);
 	return d / (d * (1 - k) + k);
 }
 
@@ -289,14 +319,30 @@ float shadowing_smith(float roughness, float n_v, float n_l)
 	return shadowing_schlick(roughness, n_v) * shadowing_schlick(roughness, n_l);
 }
 
+float attenuation(float dist)
+{
+	return dist * dist + dist + 1;
+}
+
+float attenuation(vec3 position1, vec3 position2)
+{
+	float len = length(position1 - position2);
+	return attenuation(len);
+}
+
 float computeD(hitinfo h, float cos_theta)
 {
-	float roughness_2 = pow(h.mat.roughness, 2);
-	float r = (roughness_2 - 1) * pow(cos_theta, 2) + 1;
-	float D = roughness_2 / (PI * pow(r, 2));
+	float roughness_2 = h.mat.roughness * h.mat.roughness;
+	float r = (roughness_2 - 1) * cos_theta * cos_theta + 1;
+	float D = roughness_2 / (PI * r * r);
 	if (isnan(D))
 		D = 1;
 	return D;
+}
+
+vec3 LambertBRDF(material m, vec3 wo, vec3 wi)
+{
+	return m.color * OneOverPI;
 }
 
 vec4 brdf(vec3 wo, vec3 wi, float cos_theta, hitinfo h, vec3 h_t)
@@ -319,148 +365,163 @@ vec4 brdf(vec3 wo, vec3 wi, float cos_theta, hitinfo h, vec3 h_t)
 
 vec3 ambient_contribution()
 {
-	return vec3(0.05);
+	return backColor / 10;
 }
 
-float pdf(float D, float cos_theta, vec3 wo)
+float pdfGGX(float D, vec3 wm, vec3 wi)
 {
-	return max(D * cos_theta, 0.00000001);
+	float cos_theta = abs(dot(wm, wi));
+	return max(D / (4 * cos_theta), 0.000001);
+}
+
+float pdfCosine(vec3 normal, vec3 wi)
+{
+	// 'normal' and 'wi' both need to be normalized
+	return dot(normal, wi) * OneOverPI;
 }
 
 vec3 light_specular(vec3 position, hitinfo h, vec3 wi, vec3 wo, int k)
 {
-	vec3 half_normal = normalize(wi + wo);
+	vec3 half_normal = normalize(wo - wi);
 	float cos_theta = max(0, dot(half_normal, h.normal));
 
-	vec4 res = brdf(wo, wi, cos_theta, h, half_normal);
+	// in the brdf both rays need to be pointing away from the surface
+	vec4 res = brdf(wo, -wi, cos_theta, h, half_normal);
 	vec3 brdf_color = res.rgb;
 
 	float distance = length(lights[k].position - position);
-	float pdf = pdf(res.a, cos_theta, wi);
+	float pdf = pdfGGX(res.a, half_normal, wi);
 
-	return (brdf_color * lights[k].color * dot(h.normal, wi) * lights[k].intensity) / (distance * distance);
+	return (get_specular_color(h.mat) * brdf_color * lights[k].color * dot(h.normal, -wi) * lights[k].intensity) / attenuation(distance) / pdf;
 }
 
+//////////////////////////////
+//	\\ cam     ^ light		//
+//   \\		  | \			//
+//	  \\  wo  // wi			//
+//     \\    //				//
+//     \ |  //				//
+//       V //				//
+//________X_________________//
+//							//
+//////////////////////////////
 vec3 light_diffuse(vec3 position, hitinfo h, vec3 wi, int k)
 {
 	float distance = length(lights[k].position - position);
 
-	return (get_diffuse_color(h.mat) / PI * lights[k].color * dot(h.normal, wi) * lights[k].intensity) / (distance * distance);
+
+	return (get_diffuse_color(h.mat) * OneOverPI * lights[k].color * dot(h.normal, wi) * lights[k].intensity) / attenuation(distance);
 }
 
-vec3 reflect_specular(vec3 position1, vec3 position2, hitinfo h, vec3 wi, vec3 wo, vec3 color)
+vec3 getContributions(hitinfo h, vec3 wo)
 {
-	vec3 half_normal = normalize(wi + wo);
-	float cos_theta = max(0, dot(half_normal, h.normal));
-
-	vec4 res = brdf(wo, wi, cos_theta, h, half_normal);
-	vec3 brdf_color = res.rgb;
-
-	float distance = length(position1 - position2);
-	float pdf = pdf(res.a, cos_theta, wi);
-
-	return (brdf_color * color) / (distance * distance);
-}
-
-vec3 reflect_diffuse(vec3 position1, vec3 position2, hitinfo h, vec3 color)
-{
-	float distance = length(position1 - position2);
-
-	return (get_diffuse_color(h.mat) / PI * color) / (distance * distance);
-}
-
-vec4 trace(vec3 origin, vec3 dir, int bounces);
-
-vec4 getContributions(vec3 position, hitinfo h, vec3 wo)
-{
+	vec3 position = h.hit;
 	vec3 color = vec3(0);
 	for (int i = 0; i < LIGHT_COUNT; ++i)
 	{
+		// 'wi' points towards the light
 		vec3 wi = normalize(lights[i].position - position);
-		//return vec4(position, 1);
-		//return vec4(vec3(h.delta.y), 1);
-		if (CheckVisibility(position, wi, length(position - lights[i].position), h.bi))
+		// find any obstructing geometry between the surface point and the light
+		if (CheckVisibility(position, wi, length(lights[i].position - position)))
 		{
-			color += light_specular(position, h, wi, wo, i);
+			//color += light_specular(position, h, wi, wo, i);
 			color += light_diffuse(position, h, wi, i);
 		}
 	}
 
-	color += h.mat.color * ambient_contribution();
+	//color += h.mat.color * ambient_contribution();
 
-	return vec4(color, 1);
+	return color;
 }
 
-traceinfo trace(vec3 origin, vec3 dir) 
+hitinfo rayCast(vec3 origin, vec3 dir) 
 {
 	hitinfo h;
+	h.end = true;
 	if (intersectPrimitives(origin, dir, h)) 
 	{
-		vec3 position = origin + dir * h.delta.x;
-		vec4 color = getContributions(position, h, -dir);
+		vec3 tangent = compute_tangent(h.normal);
+		vec3 bitangent = cross(h.normal, tangent);
+		mat3 TBN = mat3(tangent, h.normal, bitangent);
 
-		vec3 bitangent = cross(h.normal, h.tangent);
-		mat3 TBN = mat3(h.tangent, h.normal, bitangent);
-
-		vec3 half_vector = halfvector_GGX_sample(h.mat.roughness);
+		vec3 half_vector = cosineSample();
 		vec3 half_vector_transformed = normalize(TBN * half_vector);
 
 		vec3 wi = reflect(dir, half_vector_transformed);
 
-		float cos_theta = dot(h.normal, half_vector_transformed);
-
-		vec3 resultColor = color.rgb;
-
-		return traceinfo(position, wi, vec4(resultColor, 1), h, true);
+		h.dir = wi;
+		h.end = false;
 	}
-	return traceinfo(vec3(0), vec3(0), vec4(0.05, 0.05, 0.05, 1.0), h, false);
-}
-
-float attenuation(vec3 position1, vec3 position2)
-{
-	float len = length(position1 - position2);
-	return len * len;
+	return h;
 }
 
 vec4 accumulateColor(vec3 origin, vec3 dir)
-{
-	//traceinfo tis[bounces];
-	vec3 color = vec3(0);
-	for (int i = 0; i < bounces; ++i)
+{	
+	hitinfo hits[bounces + 1];
+	int end = 0;
+
+	for (int i = 0; i < bounces + 1; ++i)
 	{
-		traceinfo ti = trace(origin, dir);
-		origin = ti.position;
-		dir = ti.direction;
-
-		if (ti.hit || i == 0)
-			color += ti.color.rgb / (i + 1);
-
-		//tis[i] = ti;
-		if (!ti.hit)
+		hits[i] = rayCast(origin, dir);
+		origin = hits[i].hit;
+		dir = hits[i].dir;
+		if (!hits[i].end)
+			++end;
+		else
 			break;
 	}
 
-	//for (int i = 0; i < bounces - 1; ++i)
-	//{
-	//	if (!tis[i].hit)
-	//		break;
-	//	//color += reflect_diffuse(tis[i].position, tis[i + 1].position, tis[i].h, tis[i + 1].color.rgb) / (i + 1);
-	//
-	//	vec3 wo = normalize(origin - tis[0].position);
-	//	if (i > 0)
-	//		wo = normalize(tis[i - 1].position - tis[i].position);
-	//	vec3 wi = normalize(tis[i].position - tis[i + 1].position);
-	//	color += reflect_specular(tis[i].position, tis[i + 1].position, tis[i].h, wi, wo, tis[i + 1].color.rgb) / (i + 1);
-	//}
+	//return vec4(vec3(end - 1 >= 0), 1);
+
+	// For each bounce accumulate its color attenuated by bouncing and by distance travelled
+	vec3 color = vec3(0);
+	for (int i = end; i >= 0; --i)
+	{ 
+		if (hits[i].end)
+		{
+			// Bounce into the environment
+			color = backColor;
+			continue;
+		}
+
+		// Modify by distance, last bounce and brdf
+		color *= 0.65; // bounce energy loss (in the future it should depend on the material)
+		
+		vec3 wi = hits[i].dir;
+		vec3 wo;
+
+		if (i == 0)
+			wo = normalize(eye - hits[i].hit);
+		else
+			wo = -hits[i - 1].dir;
+
+		// TODO: do this only if you have a color to transform
+		if (color.x > 0 && color.y > 0 && color.z > 0)
+			color = (get_diffuse_color(hits[i].mat) * LambertBRDF(hits[i].mat, wo, wi) * color * dot(hits[i].normal, wi)) / pdfCosine(hits[i].normal, wi);
+		color += getContributions(hits[i], wo);
+	}
+
 	return vec4(color, 1);
+}
+
+vec4 pixelSample(vec3 origin, vec3 dir, int samples)
+{
+	if (samples <= 0)
+		return vec4(0, 0, 0, 1);
+	// TODO: jitter
+	vec4 color = accumulateColor(origin, dir);
+	for (int i = 1; i < samples; ++i)
+	{
+		color += accumulateColor(origin, dir);
+	}
+	return color / float(samples);
 }
 //================================================================================
 
 //===================================MAIN=========================================
-layout (local_size_x = 8, local_size_y = 8) in;
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main(void) 
 {
-	//lights[0].position = vec3(cos(time / 1000), 0.3, sin(time / 1000));
 	pix = ivec2(gl_GlobalInvocationID.xy);
 	ivec2 size = imageSize(framebuffer);
 	
@@ -469,7 +530,7 @@ void main(void)
 	
 	vec2 pos = vec2(pix) / vec2(size.x - 1, size.y - 1);
 	vec3 dir = normalize(mix(mix(ray00, ray01, pos.y), mix(ray10, ray11, pos.y), pos.x));
-	vec4 color = accumulateColor(eye, dir);
+	vec4 color = pixelSample(eye, dir, 16);
 	imageStore(framebuffer, pix, color);
 }
 //================================================================================

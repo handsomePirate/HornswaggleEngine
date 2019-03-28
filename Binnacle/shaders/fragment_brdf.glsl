@@ -107,20 +107,13 @@ vec4 brdf(vec3 wi, vec3 wo, float cos_theta, vec3 n, vec3 h_t)
 	float n_v = abs(dot(n, wi));
 	float n_l = abs(dot(n, wo));
 	float G = shadowing_smith(n_v, n_l);
-	//fragColor = vec4(cos_theta, 0, 0, 1);
-	//fragColor = vec4(F, 1);
 
 	vec3 reflectance = F * D * G / abs(n_v * n_l * 4);
-
-	//fragColor = vec4(vec3(abs(D)), 1);
-	fragColor = vec4(vec3(G), 1);
-	//fragColor = vec4(F, 1);
-	//fragColor = vec4(reflectance, 1);
 
 	return vec4(reflectance * specular_color, D); // this might need to be f
 }
 
-float pdf(float D, float cos_theta, vec3 wo)
+float pdf(float D, float cos_theta)
 {
 	return max(D * cos_theta, 0.00000001);
 }
@@ -129,24 +122,23 @@ vec3 sample_specular(int k)
 {
 	vec3 wo = normalize(lightPositions[k] - position.xyz);
 
-	vec3 half_normal = normalize(-wi + wo);
+	vec3 half_normal = normalize(wi + wo);
 	float cos_theta = max(0, dot(half_normal, normal));
 
-	vec4 res = brdf(wi, wo, cos_theta, normal, half_normal);
+	vec4 res = brdf(wo, wi, cos_theta, h, half_normal);
 	vec3 brdf_color = res.rgb;
-	//fragColor = vec4(brdf(wi, wo, cos_theta, normal, half_normal).rgb, 1);
 
-	float distance = length(lightPositions[k] - position.xyz);
+	float distance = length(lights[k].position - position);
+	float pdf = pdf(res.a, max(0, dot(normal, wi)));
 
-	return (brdf_color * lightColors[k] * dot(normal, wo) * lightIntensities[k]) / (distance * distance);
+	return (brdf_color * lightColors[k] * dot(normal, wi) * lightIntensities[k]) / (distance * distance) / pdf;
 }
 
 vec3 sample_diffuse(int k)
 {
-	vec3 wo = normalize(lightPositions[k] - position.xyz);
 	float distance = length(lightPositions[k] - position.xyz);
-	
-	return (diffuse_color / PI * lightColors[k] * dot(normal, wo) * lightIntensities[k]) / (distance * distance);
+
+	return (diffuse_color / PI * lightColors[k] * dot(normal, wi) * lightIntensities[k]) / (distance * distance);
 }
 
 vec2 ray_to_uv(vec3 direction)
@@ -185,7 +177,7 @@ vec3 sample_brdf_environment()
 	vec4 tex = texture(environment_map, ray_to_uv(wo));
 	vec3 tex_color = tex.rgb / (tex.a * tex.a);
 
-	return brdf_color * tex_color * dot(normal, wo);/* / pdf(res.a, half_vector.y, wo);*/
+	return brdf_color * tex_color * dot(normal, wo) / pdf(res.a, max(0, dot(normal, wi)));
 }
 
 vec3 sample_diffuse_environment()

@@ -9,6 +9,9 @@
 #include <iostream>
 #include "OpenGLRenderer.hpp"
 
+#define STABILIZE_FRAMERATE
+//#undef STABILIZE_FRAMERATE
+
 #ifndef LIB
 int main(int argc, char **argv)
 {
@@ -22,11 +25,7 @@ int main(int argc, char **argv)
 
 	//rm.init_opengl_renderer();
 	rm.init_path_tracer();
-
-	//rm.init_path_tracing("path_trace_compute.glsl");
-	//rm.path_trace();
-	//
-	//return 0;
+	rm.set_background_color(glm::vec3(0.2, 0.2, 0.6));
 
 	rm.set_lights(light(glm::vec3(1.0f, 0.1f, 9.0f), glm::vec3(1.0f, 1.0f, 1.0f), 20),
 		light(glm::vec3(-3.0f, 0.8f, 15.0f), glm::vec3(0.75f, 0, 1.0f), 40));
@@ -39,7 +38,7 @@ int main(int argc, char **argv)
 
 	const auto model = rm.load_model("Human_body.obj", true, mat_id_notex);
 
-	const int instance_count = 4;
+	const int instance_count = 0;
 	std::vector<instance_handle> handles;
 	const float circle_size = 1.6f;
 	for (int i = 0; i < instance_count; ++i)
@@ -64,9 +63,11 @@ int main(int argc, char **argv)
 
 		const auto angle = 40.0f;
 		rm.render();
+#ifdef STABILIZE_FRAMERATE
 		// Stabilize the framerate somewhat
 		if (time_elapsed < FRAMERATE_STEP)
 			Sleep((FRAMERATE_STEP - time_elapsed) * 1000);
+#endif
 	}
 
 	return 0;

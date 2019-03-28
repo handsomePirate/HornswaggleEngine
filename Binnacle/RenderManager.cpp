@@ -100,6 +100,17 @@ render_manager::render_manager(const bool fullscreen, int samples, const int maj
 	glCullFace(GL_BACK);
 	glEnable(GL_CULL_FACE);
 	glEnable(GL_PROGRAM_POINT_SIZE);
+#ifdef ENABLE_DEBUG_CONTEXT
+	glEnable(GL_DEBUG_OUTPUT);
+
+	const auto error_func = [](int error, const char* description)
+	{
+		fprintf(stdout, "OpenGL error: \n%s\n", description);
+		std::cin.get();
+	};
+
+	glfwSetErrorCallback(error_func);
+#endif
 
 	if (window_visible)
 		glfwShowWindow(window_);

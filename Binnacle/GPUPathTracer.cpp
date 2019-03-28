@@ -63,14 +63,17 @@ void gpu_path_tracer::render(const std::shared_ptr<scene>& scn_ptr,
 	const auto ray11_loc = glGetUniformLocation(path_tracer_program_, "ray11");
 	glUniform3fv(ray11_loc, 1, &ray11[0]);
 
+	const auto back_color_loc = glGetUniformLocation(path_tracer_program_, "backColor");
+	glUniform3fv(back_color_loc, 1, &background_color_[0]);
+
 	const auto now = std::chrono::system_clock::now();
 	const auto now_milli = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
 	const auto epoch = now_milli.time_since_epoch();
 	const auto time = std::chrono::duration_cast<std::chrono::milliseconds>(epoch).count();
 	const auto time_loc = glGetUniformLocation(path_tracer_program_, "time");
 	glUniform1i(time_loc, time);
-	
-	glDispatchCompute((GLuint)width_, (GLuint)height_, 1);
+
+	glDispatchCompute((GLuint)width_ / 16, (GLuint)height_ / 16, 1);
 
 	// make sure writing to image has finished before read
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);

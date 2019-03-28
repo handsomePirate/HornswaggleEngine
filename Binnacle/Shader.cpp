@@ -237,7 +237,8 @@ void shader_program::update(const std::shared_ptr<environment>& env_ptr, const b
 
 		const int light_count_limit = 20;
 		const auto lights_count_loc = glGetUniformLocation(program_, "lightsCount");
-		glUniform1i(lights_count_loc, light_pos.size() > light_count_limit ? light_count_limit : light_pos.size());
+		if (!light_pos.empty())
+			glUniform1i(lights_count_loc, light_pos.size());
 
 		const auto light_col_loc = glGetUniformLocation(program_, "lightColors");
 		const auto light_col = env_ptr->get_light_colors();
@@ -301,8 +302,8 @@ void material::update()
 	const auto mat_color_loc = glGetUniformLocation(program_, "material.color");
 	glUniform3fv(mat_color_loc, 1, &color_[0]);
 
-	const float roughness = 0.0f;
-	const float metalness = 1;
+	const float roughness = 0.1f;
+	const float metalness = 0;
 
 	const auto roughness_loc = glGetUniformLocation(program_, "material.roughness");
 	glUniform1f(roughness_loc, roughness);
