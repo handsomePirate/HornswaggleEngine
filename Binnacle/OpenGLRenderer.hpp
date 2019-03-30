@@ -19,7 +19,7 @@ struct opengl_renderer : renderer
 
 	void render(const std::shared_ptr<scene>& scn_ptr,
 		const std::shared_ptr<std::map<int, material>>& mat_ptr,
-		const std::shared_ptr<environment>& env_ptr) const override;
+		const std::shared_ptr<environment>& env_ptr) override;
 
 	void enable(const vizualization& option) const override;
 	void disable(const vizualization& option) const override;
@@ -29,6 +29,8 @@ struct opengl_renderer : renderer
 	void set_background_color(const glm::vec3& color) override;
 
 	void change_viewport_size(unsigned int width, unsigned int height) override;
+
+	unsigned long long get_time_elapsed() const override;
 private:
 	void set_buffer_attrib(const buffer_attrib& option) const;
 
@@ -37,4 +39,7 @@ private:
 
 	bool *vizualization_options_;
 	glm::vec3 background_color_{};
+
+	GLuint time_query_;
+	GLuint64 time_elapsed_ = 0;
 };

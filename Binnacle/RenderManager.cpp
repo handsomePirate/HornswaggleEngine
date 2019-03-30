@@ -698,7 +698,6 @@ void render_manager::render() const
 {
 	if (valid_ && rnd_ptr_ && scn_ptr_ && env_ptr_ && GL_NO_ERROR == glGetError())
 	{
-		// glfwMakeContextCurrent(window_);
 		rnd_ptr_->render(scn_ptr_, mat_ptr_, env_ptr_);
 		glfwSwapBuffers(window_);
 	}
@@ -736,6 +735,9 @@ void render_manager::key_callback(GLFWwindow* window, const int key, const int s
 		std::cout << "poly count: " << poly_count_ << std::endl;
 		std::cout << "FPS: " << get_fps() << std::endl;
 		std::cout << "fov: " << get_camera().get_fov() << std::endl;
+#ifdef MEASURE_SHADER_TIME
+		std::cout << "latest render time: " << rnd_ptr_->get_time_elapsed() << " ms" << std::endl;
+#endif
 	}
 }
 

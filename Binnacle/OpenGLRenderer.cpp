@@ -3,6 +3,7 @@
 
 #include "OpenGLRenderer.hpp"
 #include <iostream>
+#include <chrono>
 
 opengl_renderer::opengl_renderer(const GLuint texture_draw_program)
 	: renderer(texture_draw_program)
@@ -16,11 +17,15 @@ opengl_renderer::opengl_renderer(const GLuint texture_draw_program)
 	glGenBuffers(1, &vbo_);
 	glGenBuffers(1, &vio_);
 
-	opengl_renderer::set_buffer_attrib(buffer_attrib::VERTEX);
+	set_buffer_attrib(buffer_attrib::VERTEX);
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS);
 	background_color_ = glm::vec3(0.1f, 0.1f, 0.1f);
+
+#ifdef MEASURE_SHADER_TIME
+	glGenQueries(1, &time_query_);
+#endif
 }
 
 opengl_renderer::~opengl_renderer()
@@ -30,8 +35,12 @@ opengl_renderer::~opengl_renderer()
 
 void opengl_renderer::render(const std::shared_ptr<scene>& scn_ptr,
 	const std::shared_ptr<std::map<int, material>>& mat_ptr,
-	const std::shared_ptr<environment>& env_ptr) const
+	const std::shared_ptr<environment>& env_ptr)
 {
+#ifdef MEASURE_SHADER_TIME
+	const auto start = std::chrono::high_resolution_clock::now();
+	glBeginQuery(GL_TIME_ELAPSED, time_query_);
+#endif
 	glClearColor(background_color_.r, background_color_.g, background_color_.b, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	glClear(GL_DEPTH_BUFFER_BIT);
@@ -91,6 +100,18 @@ void opengl_renderer::render(const std::shared_ptr<scene>& scn_ptr,
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+#ifdef MEASURE_SHADER_TIME
+	glEndQuery(GL_TIME_ELAPSED);
+
+	GLint done = 0;
+	while (!done)
+		glGetQueryObjectiv(time_query_, GL_QUERY_RESULT_AVAILABLE, &done);
+
+	//glGetQueryObjectui64v(time_query_, GL_QUERY_RESULT, &time_elapsed_);
+	const auto end = std::chrono::high_resolution_clock::now();
+	time_elapsed_ = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+#endif
 }
 
 void opengl_renderer::enable(const vizualization& option) const
@@ -149,3 +170,8 @@ void opengl_renderer::set_background_color(const glm::vec3& color)
 
 void opengl_renderer::change_viewport_size(unsigned width, unsigned height)
 { }
+
+unsigned long long opengl_renderer::get_time_elapsed() const
+{
+	return time_elapsed_;
+}

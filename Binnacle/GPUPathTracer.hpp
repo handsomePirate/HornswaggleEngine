@@ -12,7 +12,7 @@ struct gpu_path_tracer : renderer
 
 	void render(const std::shared_ptr<scene>& scn_ptr,
 		const std::shared_ptr<std::map<int, material>>& mat_ptr,
-		const std::shared_ptr<environment>& env_ptr) const override;
+		const std::shared_ptr<environment>& env_ptr) override;
 
 	void enable(const vizualization& option) const override;
 	void disable(const vizualization& option) const override;
@@ -22,6 +22,8 @@ struct gpu_path_tracer : renderer
 	void set_background_color(const glm::vec3& color) override;
 
 	void change_viewport_size(unsigned int width, unsigned int height) override;
+
+	unsigned long long get_time_elapsed() const override;
 private:
 	// TODO: destroy these objects
 	GLuint tex_;
@@ -31,4 +33,7 @@ private:
 
 	bool *vizualization_options_;
 	glm::vec3 background_color_{};
+
+	GLuint time_query_;
+	GLuint64 time_elapsed_ = 0;
 };

@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 
 	const auto model = rm.load_model("Human_body.obj", true, mat_id_notex);
 
-	const int instance_count = 0;
+	const int instance_count = 4;
 	std::vector<instance_handle> handles;
 	const float circle_size = 1.6f;
 	for (int i = 0; i < instance_count; ++i)

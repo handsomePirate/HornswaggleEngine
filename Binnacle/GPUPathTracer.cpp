@@ -4,6 +4,7 @@
 gpu_path_tracer::gpu_path_tracer(const GLuint texture_draw_program, const GLuint path_tracer_program, const int width, const int height)
 	: renderer(texture_draw_program), path_tracer_program_(path_tracer_program), width_(width), height_(height)
 {
+	// Prepare the rendering parameters and texture
 	vizualization_options_ = new bool[2]
 	{
 		/*LIGHTS = */false,
@@ -20,6 +21,11 @@ gpu_path_tracer::gpu_path_tracer(const GLuint texture_draw_program, const GLuint
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, nullptr);
+
+#ifdef MEASURE_SHADER_TIME
+	// Prepare time measurement device
+	glGenQueries(1, &time_query_);
+#endif
 }
 
 gpu_path_tracer::~gpu_path_tracer()
@@ -29,10 +35,17 @@ gpu_path_tracer::~gpu_path_tracer()
 
 void gpu_path_tracer::render(const std::shared_ptr<scene>& scn_ptr,
 	const std::shared_ptr<std::map<int, material>>& mat_ptr,
-	const std::shared_ptr<environment>& env_ptr) const
+	const std::shared_ptr<environment>& env_ptr)
 {
+#ifdef MEASURE_SHADER_TIME
+	// Start shader timer
+	glBeginQuery(GL_TIME_ELAPSED, time_query_);
+#endif
+	// Setup program
 	glBindImageTexture(0, tex_, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 	glUseProgram(path_tracer_program_);
+
+	// Update shader camera
 	glm::vec4 eye = env_ptr->get_camera().get_position();
 	const auto eye_loc = glGetUniformLocation(path_tracer_program_, "eye");
 	glUniform3fv(eye_loc, 1, &eye[0]);
@@ -66,6 +79,7 @@ void gpu_path_tracer::render(const std::shared_ptr<scene>& scn_ptr,
 	const auto back_color_loc = glGetUniformLocation(path_tracer_program_, "backColor");
 	glUniform3fv(back_color_loc, 1, &background_color_[0]);
 
+	// Update the shader clock for the light movement
 	const auto now = std::chrono::system_clock::now();
 	const auto now_milli = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
 	const auto epoch = now_milli.time_since_epoch();
@@ -73,12 +87,24 @@ void gpu_path_tracer::render(const std::shared_ptr<scene>& scn_ptr,
 	const auto time_loc = glGetUniformLocation(path_tracer_program_, "time");
 	glUniform1i(time_loc, time);
 
+	// Compute
 	glDispatchCompute((GLuint)width_ / 16, (GLuint)height_ / 16, 1);
 
 	// make sure writing to image has finished before read
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 	render_texture(tex_);
+
+#ifdef MEASURE_SHADER_TIME
+	// Query time elapsed for rendering
+	glEndQuery(GL_TIME_ELAPSED);
+
+	GLint done = 0;
+	while (!done)
+		glGetQueryObjectiv(time_query_, GL_QUERY_RESULT_AVAILABLE, &done);
+
+	glGetQueryObjectui64v(time_query_, GL_QUERY_RESULT, &time_elapsed_);
+#endif
 }
 
 void gpu_path_tracer::enable(const vizualization& option) const
@@ -103,6 +129,7 @@ void gpu_path_tracer::set_background_color(const glm::vec3& color)
 
 void gpu_path_tracer::change_viewport_size(const unsigned int width, const unsigned int height)
 {
+	// Change the size of the texture
 	width_ = width;
 	height_ = height;
 	glDeleteTextures(1, &tex_);
@@ -114,4 +141,10 @@ void gpu_path_tracer::change_viewport_size(const unsigned int width, const unsig
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, nullptr);
+}
+
+unsigned long long gpu_path_tracer::get_time_elapsed() const
+{
+	// Return in milliseconds
+	return time_elapsed_ / 1000000;
 }
