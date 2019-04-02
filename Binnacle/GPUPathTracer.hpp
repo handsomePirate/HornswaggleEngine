@@ -32,7 +32,8 @@ private:
 	int width_;
 	int height_;
 
-	const int samples = 2;
+	const int samples = 1;
+	const int bounces = 3;
 
 	bool *vizualization_options_;
 	glm::vec3 background_color_{};

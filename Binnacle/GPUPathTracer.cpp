@@ -90,6 +90,9 @@ void gpu_path_tracer::render(const std::shared_ptr<scene>& scn_ptr,
 	auto samples_loc = glGetUniformLocation(path_tracer_program_, "samples");
 	glUniform1i(samples_loc, samples);
 
+	auto bounces_loc = glGetUniformLocation(path_tracer_program_, "bounces_uni");
+	glUniform1i(bounces_loc, bounces);
+
 	// Compute
 	glDispatchCompute((GLuint)width_ / 16, (GLuint)height_ / 16, samples);
 

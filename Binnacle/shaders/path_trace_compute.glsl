@@ -13,8 +13,9 @@ uniform vec3 ray11;
 uniform vec3 backColor;
 uniform int time;
 uniform int samples;
-
-const int bounces = 1;
+uniform int bounces_uni;
+int bounces;
+#define MAX_BOUNCES 7
 
 ivec2 pix;
 #define PI 3.14159265358979323846
@@ -453,7 +454,7 @@ vec3 getColorAt(hitinfo h, vec3 wo)
 vec4 accumulateColor(vec3 origin, vec3 dir)
 {	
 	// The first slot serves to hold the direction from the eye to avoid if-else branching later
-	hitinfo hits[bounces + 2];
+	hitinfo hits[MAX_BOUNCES + 2];
 	int end = 1;
 
 	// Follow the path of the ray and remember the hit information (to avoid recursion)
@@ -508,6 +509,7 @@ vec4 pixelSample(vec3 origin, vec3 dir)
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main(void) 
 {	
+	bounces = bounces_uni < MAX_BOUNCES ? bounces_uni : MAX_BOUNCES;
 	pix = ivec2(gl_GlobalInvocationID.xy);
 	ivec2 size = imageSize(framebuffer);
 
