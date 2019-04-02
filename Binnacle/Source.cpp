@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 	const auto shader_program_id = rm.create_shader_program("vertex.glsl", "fragment_lambert_cook_torrance_GGX.glsl");
 	const auto mat_id_notex = rm.create_material(shader_program_id, glm::vec3(1.0f, 1.0f, 1.0f)); // glm::vec3(1.0f, 0.843f, 0.0f)
 
-	const auto model = rm.load_model("Human_body.obj", true, mat_id_notex);
+	const auto model = rm.load_model("32k_sphere.obj", true, mat_id_notex);
 
 	const int instance_count = 4;
 	std::vector<instance_handle> handles;

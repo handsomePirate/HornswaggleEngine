@@ -209,6 +209,7 @@ void render_manager::init_path_tracer()
 	if (valid_)
 	{
 		quad_shader_program_ = create_shader_program("quad_vertex.glsl", "quad_fragment.glsl", "quad_geometry.glsl");
+		// TODO: destroy the following shader
 		GLuint path_tracer_program = create_compute_shader("path_trace_compute.glsl");
 
 		rnd_ptr_ = std::make_unique<gpu_path_tracer>(quad_shader_program_, path_tracer_program, width_, height_);

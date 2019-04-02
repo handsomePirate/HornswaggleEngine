@@ -28,8 +28,11 @@ private:
 	// TODO: destroy these objects
 	GLuint tex_;
 	GLuint path_tracer_program_;
+
 	int width_;
 	int height_;
+
+	const int samples = 2;
 
 	bool *vizualization_options_;
 	glm::vec3 background_color_{};

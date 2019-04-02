@@ -12,6 +12,7 @@ uniform vec3 ray11;
 
 uniform vec3 backColor;
 uniform int time;
+uniform int samples;
 
 const int bounces = 1;
 
@@ -77,9 +78,9 @@ struct light
 
 const triangle triangles[] = 
 {
-	{{vec3(-5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(-5, 0, -5), vec3(0, 1, 0)}, {0.001, 1, vec3(1, 1, 1)}},
-	{{vec3(-5, 0, -5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, -5), vec3(0, 1, 0)}, {0.001, 1, vec3(1, 1, 1)}},
-	BOX(-0.5, 0, -0.5, 0.5, 1, 0.5, material(0.001, 1, vec3(1, 0.2, 0.2))),
+	{{vec3(-5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(-5, 0, -5), vec3(0, 1, 0)}, {0.001, 0, vec3(1, 1, 1)}},
+	{{vec3(-5, 0, -5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, -5), vec3(0, 1, 0)}, {0.001, 0, vec3(1, 1, 1)}},
+	BOX(-0.5, 0, -0.5, 0.5, 1, 0.5, material(0.001, 0, vec3(1, 0.2, 0.2))),
 };
 
 const int time_mod = 20000;
@@ -217,19 +218,20 @@ bool intersectPrimitives(vec3 origin, vec3 dir, out hitinfo info)
 	{
 		float t = intersectTriangle(origin, dir, i);
 		vec3 hit = origin + t * dir;
-		vec3 normal = interpolateNormal(i, hit);
 		
-		if (t > 0.01 && t < smallest 
-#ifdef CULL_BACKFACES
-		&& dot(-dir, normal) > 0
-#endif
-		)
+		if (t > 0.01 && t < smallest)
 		{
-			info.at = hit;
-			info.mat = triangles[i].mat;
-			info.normal = normal;
-			smallest = t;
-			found = true;
+			vec3 normal = interpolateNormal(i, hit);
+#ifdef CULL_BACKFACES 
+			if (dot(-dir, normal) > 0)
+#endif
+			{
+				info.at = hit;
+				info.mat = triangles[i].mat;
+				info.normal = normal;
+				smallest = t;
+				found = true;
+			}
 		}
 	}
 
@@ -490,10 +492,8 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 	return vec4(color, 1);
 }
 
-vec4 pixelSample(vec3 origin, vec3 dir, int samples)
+vec4 pixelSample(vec3 origin, vec3 dir)
 {
-	if (samples <= 0)
-		return vec4(0, 0, 0, 1);
 	// TODO: jitter
 	vec4 color = accumulateColor(origin, dir);
 	for (int i = 1; i < samples; ++i)
@@ -507,16 +507,20 @@ vec4 pixelSample(vec3 origin, vec3 dir, int samples)
 //===================================MAIN=========================================
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 void main(void) 
-{
+{	
 	pix = ivec2(gl_GlobalInvocationID.xy);
 	ivec2 size = imageSize(framebuffer);
+
+	uint sampleID = gl_GlobalInvocationID.z;
 	
 	if (pix.x >= size.x || pix.y >= size.y)
 		return;
-	
-	vec2 pos = vec2(pix) / vec2(size.x - 1, size.y - 1);
+
+	vec2 pos = vec2(pix) / vec2(size.x - 1, size.y / samples - 1);
+	pix.y += int(sampleID) * size.y / samples;
+
 	vec3 dir = normalize(mix(mix(ray00, ray01, pos.y), mix(ray10, ray11, pos.y), pos.x));
-	vec4 color = pixelSample(eye, dir, 1);
+	vec4 color = pixelSample(eye, dir);
 	imageStore(framebuffer, pix, color);
 }
 //================================================================================

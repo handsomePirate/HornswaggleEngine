@@ -20,7 +20,7 @@ gpu_path_tracer::gpu_path_tracer(const GLuint texture_draw_program, const GLuint
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height * samples, 0, GL_RGBA, GL_FLOAT, nullptr);
 
 #ifdef MEASURE_SHADER_TIME
 	// Prepare time measurement device
@@ -87,13 +87,16 @@ void gpu_path_tracer::render(const std::shared_ptr<scene>& scn_ptr,
 	const auto time_loc = glGetUniformLocation(path_tracer_program_, "time");
 	glUniform1i(time_loc, time);
 
+	auto samples_loc = glGetUniformLocation(path_tracer_program_, "samples");
+	glUniform1i(samples_loc, samples);
+
 	// Compute
-	glDispatchCompute((GLuint)width_ / 16, (GLuint)height_ / 16, 1);
+	glDispatchCompute((GLuint)width_ / 16, (GLuint)height_ / 16, samples);
 
 	// make sure writing to image has finished before read
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-	render_texture(tex_);
+	render_texture(tex_, samples);
 
 #ifdef MEASURE_SHADER_TIME
 	// Query time elapsed for rendering
@@ -140,7 +143,7 @@ void gpu_path_tracer::change_viewport_size(const unsigned int width, const unsig
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, nullptr);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height * samples, 0, GL_RGBA, GL_FLOAT, nullptr);
 }
 
 unsigned long long gpu_path_tracer::get_time_elapsed() const
