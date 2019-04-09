@@ -94,7 +94,8 @@ void gpu_path_tracer::render(const std::shared_ptr<scene>& scn_ptr,
 	glUniform1i(bounces_loc, bounces);
 
 	// Compute
-	glDispatchCompute((GLuint)width_ / 16, (GLuint)height_ / 16, samples);
+	const int block_size = 8;
+	glDispatchCompute((GLuint)width_ / block_size, (GLuint)height_ / block_size, 1);
 
 	// make sure writing to image has finished before read
 	glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);

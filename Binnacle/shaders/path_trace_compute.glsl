@@ -132,7 +132,7 @@ vec2 rand()
 	if (rand_init)
 	{
 		rand_init = false;
-		rand_stage = tea(uvec2(abs(pix.x), abs(pix.y)));
+		rand_stage = tea(uvec2(abs(pix.x + 4 * gl_GlobalInvocationID.z), abs(pix.y + 3 * gl_GlobalInvocationID.z)));
 		return rand_stage / float(uint(0xFFFFFFFF));
 	}
 	rand_stage = tea(rand_stage);
@@ -496,33 +496,42 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 vec4 pixelSample(vec3 origin, vec3 dir)
 {
 	// TODO: jitter
-	vec4 color = accumulateColor(origin, dir);
-	for (int i = 1; i < samples; ++i)
-	{
-		color += accumulateColor(origin, dir);
-	}
-	return color / float(samples);
+	return accumulateColor(origin, dir);
 }
 //================================================================================
 
+#define SAMPLE_COUNT 8
+#define LOCAL_SIZES 8
+shared vec4 sampleBuffer[LOCAL_SIZES][LOCAL_SIZES][SAMPLE_COUNT];
+
 //===================================MAIN=========================================
-layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout (local_size_x = LOCAL_SIZES, local_size_y = LOCAL_SIZES, local_size_z = SAMPLE_COUNT) in;
 void main(void) 
 {	
 	bounces = bounces_uni < MAX_BOUNCES ? bounces_uni : MAX_BOUNCES;
 	pix = ivec2(gl_GlobalInvocationID.xy);
 	ivec2 size = imageSize(framebuffer);
-
-	uint sampleID = gl_GlobalInvocationID.z;
 	
 	if (pix.x >= size.x || pix.y >= size.y)
 		return;
 
-	vec2 pos = vec2(pix) / vec2(size.x - 1, size.y / samples - 1);
-	pix.y += int(sampleID) * size.y / samples;
+	vec2 pos = vec2(pix) / vec2(size.x - 1, size.y - 1);
 
 	vec3 dir = normalize(mix(mix(ray00, ray01, pos.y), mix(ray10, ray11, pos.y), pos.x));
 	vec4 color = pixelSample(eye, dir);
-	imageStore(framebuffer, pix, color);
+
+	sampleBuffer[gl_GlobalInvocationID.x % LOCAL_SIZES][gl_GlobalInvocationID.y % LOCAL_SIZES][gl_GlobalInvocationID.z % SAMPLE_COUNT] = color;
+
+	barrier();
+
+	if (gl_GlobalInvocationID.z % LOCAL_SIZES == 0)
+	{
+		for (int i = 1; i < SAMPLE_COUNT; ++i)
+		{
+			color += sampleBuffer[gl_GlobalInvocationID.x % LOCAL_SIZES][gl_GlobalInvocationID.y % LOCAL_SIZES][i];
+		}
+
+		imageStore(framebuffer, pix, color / SAMPLE_COUNT);
+	}
 }
 //================================================================================
