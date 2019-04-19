@@ -44,7 +44,7 @@ struct renderer
 
 	virtual void change_viewport_size(unsigned int width, unsigned int height) = 0;
 
-	void render_texture(GLuint tex, int samples = 1) const;
+	void render_texture(GLuint tex) const;
 
 	// Get time needed for the last render in milliseconds
 	virtual unsigned long long get_time_elapsed() const = 0;

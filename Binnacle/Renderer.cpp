@@ -108,7 +108,7 @@ GLuint renderer::filter(const GLuint program, const GLuint tex, const unsigned i
 	return rendered_texture;
 }
 */
-void renderer::render_texture(const GLuint tex, const int samples) const
+void renderer::render_texture(const GLuint tex) const
 {
 	glClear(GL_COLOR_BUFFER_BIT);
 
@@ -120,9 +120,6 @@ void renderer::render_texture(const GLuint tex, const int samples) const
 	glBindTexture(GL_TEXTURE_2D, tex);
 	const auto tex_loc = glGetUniformLocation(texture_draw_program_, "tex");
 	glUniform1i(tex_loc, 0);
-
-	const auto samples_loc = glGetUniformLocation(texture_draw_program_, "samples");
-	glUniform1i(samples_loc, samples);
 
 	glDrawArrays(GL_POINTS, 0, 1);
 
