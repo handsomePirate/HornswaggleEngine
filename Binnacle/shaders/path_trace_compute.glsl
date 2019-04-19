@@ -13,11 +13,14 @@ uniform vec3 ray11;
 uniform vec3 backColor;
 uniform int time;
 uniform int samples;
-const int bounces = 3;
+const int bounces = 0;
 
 ivec2 pix;
 #define PI 3.14159265358979323846
 #define OneOverPI 0.31830988618379067153
+
+#define USE_SHADOWS
+//#undef USE_SHADOWS
 
 //===========================PRIMITIVE==DEFINITIONS===============================
 struct material
@@ -207,7 +210,7 @@ vec3 interpolateNormal(int i, vec3 hit)
 	return normalize(triangles[i].v1.normal * bar1 + triangles[i].v2.normal * bar2 + triangles[i].v3.normal * bar3);
 };
 
-const float margin = 0.01;
+const float margin = 0;
 bool intersectPrimitives(vec3 origin, vec3 dir, out hitinfo info) 
 {
 	float smallest = MAX_SCENE_BOUNDS;
@@ -218,7 +221,7 @@ bool intersectPrimitives(vec3 origin, vec3 dir, out hitinfo info)
 		float t = intersectTriangle(origin, dir, i);
 		vec3 hit = origin + t * dir;
 		
-		if (t > 0.01 && t < smallest)
+		if (t > margin && t < smallest)
 		{
 			vec3 normal = interpolateNormal(i, hit);
 #ifdef CULL_BACKFACES 
@@ -327,11 +330,6 @@ float computeD(hitinfo h, float cos_theta)
 	return D;
 }
 
-//vec3 LambertBRDF(material m, vec3 wo, vec3 wi)
-//{
-//	return m.color * OneOverPI;
-//}
-
 vec4 CookTorranceBRDF(vec3 wo, vec3 wi, float cos_theta, hitinfo h, vec3 h_t)
 {
 	float D = computeD(h, cos_theta);
@@ -340,11 +338,11 @@ vec4 CookTorranceBRDF(vec3 wo, vec3 wi, float cos_theta, hitinfo h, vec3 h_t)
 	vec3 f = mix(vec3(0.03), h.mat.color, h.mat.metalness);
 	vec3 F = f + (1 - f) * pow(1 - v_h, 5);
 
-	float n_v = abs(dot(h.normal, wo));
-	float n_l = abs(dot(h.normal, wi));
+	float n_v = dot(h.normal, wo);
+	float n_l = dot(h.normal, wi);
 	float G = shadowingSmith(h.mat.roughness, n_v, n_l);
 
-	vec3 reflectance = F * D * G / abs(n_v * n_l * 4);
+	vec3 reflectance = F * D * G / (n_v * n_l * 4);
 
 	return vec4(reflectance, D);
 }
@@ -371,9 +369,8 @@ vec3 lightSpecular(vec3 position, hitinfo h, vec3 wi, vec3 wo, int k)
 	vec3 brdf_color = res.rgb;
 
 	float distance = length(lights[k].position - position);
-	float pdf = pdfGGX(res.a, half_normal, wi);
 
-	return brdf_color * getSpecularColor(h.mat) * lights[k].color * dot(h.normal, wi) * lights[k].intensity / attenuation(distance) / pdf;
+	return brdf_color * getSpecularColor(h.mat) * lights[k].color * dot(h.normal, wi) * lights[k].intensity / attenuation(distance);
 }
 
 //////////////////////////////
@@ -390,7 +387,6 @@ vec3 lightDiffuse(vec3 position, hitinfo h, vec3 wi, int k)
 {
 	float distance = length(lights[k].position - position);
 
-
 	return getDiffuseColor(h.mat) * OneOverPI * lights[k].color * dot(h.normal, wi) * lights[k].intensity / attenuation(distance);
 }
 
@@ -403,7 +399,9 @@ vec3 getContributions(hitinfo h, vec3 wo)
 		// 'wi' points towards the light
 		vec3 wi = normalize(lights[i].position - position);
 		// find any obstructing geometry between the surface point and the light
+#ifdef USE_SHADOWS
 		if (CheckVisibility(position, wi, length(lights[i].position - position)))
+#endif
 		{
 			color += lightDiffuse(position, h, wi, i);
 			color += lightSpecular(position, h, wi, wo, i);
@@ -482,9 +480,9 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 		vec3 half_normal = normalize(wo + wi);
 		float cos_theta = max(0, dot(half_normal, hits[i].normal));
 
-		vec4 tc_brdf = CookTorranceBRDF(wo, wi, cos_theta, hits[i], half_normal);
+		vec4 ct_brdf = CookTorranceBRDF(wo, wi, cos_theta, hits[i], half_normal);
 
-		color = color * tc_brdf.rgb * getSpecularColor(hits[i].mat) * dot(hits[i].normal, wi) / pdfGGX(tc_brdf.a, half_normal, wi);
+		color = color * ct_brdf.rgb * getSpecularColor(hits[i].mat) * dot(hits[i].normal, wi) / pdfGGX(ct_brdf.a, half_normal, wi);
 		color += getContributions(hits[i], wo);
 	}
 

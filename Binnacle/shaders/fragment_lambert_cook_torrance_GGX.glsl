@@ -12,6 +12,7 @@ struct Material
 {
   float roughness;
   float metalness;
+  float n;
 
   vec3 color;
 };
@@ -50,7 +51,9 @@ vec3 wo;
 
 layout(location = 0) out vec4 fragColor;
 
-const float PI = 3.14159265358979323846;
+#define PI 3.14159265358979323846
+#define OneOverPI 0.31830988618379067153
+#define SqrtTwoOverPI 0.7978845608028653559
 
 //==================================RANDOM========================================
 bool rand_init = true;
@@ -149,8 +152,37 @@ float attenuation(float distance)
 	return distance * distance;
 }
 
-float computeD(float cos_theta)
+float shadowingSchlick(float roughness, float d)
 {
+	float k = roughness * SqrtTwoOverPI;
+	return d / (d * (1 - k) + k);
+}
+
+float shadowingSmith(float roughness, float n_v, float n_l)
+{
+	return shadowingSchlick(roughness, n_v) * shadowingSchlick(roughness, n_l);
+}
+
+float f0Fresnel()
+{
+	float f0 = (1 - material.n) / (1 + material.n);
+	return f0 * f0;
+}
+
+float fresnelTerm(vec3 wi, vec3 microfacet)
+{
+	float f0 = f0Fresnel();
+	return f0 + (1 - f0) * pow(1 - dot(wi, normal), 5);
+}
+
+float geometryTerm(vec3 wi, vec3 wo, vec3 microfacet)
+{
+	return shadowingSmith(material.roughness, max(0, dot(wo, normal)), max(0, dot(wi, normal)));
+}
+
+float normalDistributionFunction(vec3 microfacet)
+{
+	float cos_theta = dot(microfacet, normal);
 	float roughness_2 = material.roughness * material.roughness;
 	float r = (roughness_2 - 1) * cos_theta * cos_theta + 1;
 	float D = roughness_2 / (PI * r * r);
@@ -159,120 +191,86 @@ float computeD(float cos_theta)
 	return D;
 }
 
-float shadowing_schlick(float roughness, float d)
+vec2 brdf(vec3 wo, vec3 wi, vec3 microfacet)
 {
-	float k = roughness * sqrt(2 / PI);
-	return d / (d * (1 - k) + k);
+	float NDF = normalDistributionFunction(microfacet);
+	float n_v = dot(wo, normal);
+	float n_l = dot(wi, normal);
+	float reflectance = fresnelTerm(wi, microfacet) * geometryTerm(wi, wo, microfacet) * NDF / (4 * n_v * n_l);
+
+	return vec2(reflectance, NDF);
 }
 
-float shadowing_smith(float roughness, float n_v, float n_l)
+float attenuation(vec3 position1, vec3 position2)
 {
-	return shadowing_schlick(roughness, n_v) * shadowing_schlick(roughness, n_l);
+	float len = length(position1 - position2);
+	return attenuation(len);
 }
 
-vec4 brdf(vec3 wo, vec3 wi, vec3 h_t)
+float pdfGGX(float NDF, vec3 microfacet)
 {
-	float cos_theta = dot(h_t, normal);
-	float D = computeD(cos_theta);
-
-	float v_h = dot(h_t, wi);
-	vec3 f = vec3(0.04);
-	f = mix(f, material.color, material.metalness);
-	vec3 F = f + (1 - f) * pow(1 - v_h, 5);
-
-	float n_v = abs(dot(normal, wo));
-	float n_l = abs(dot(normal, wi));
-	float G = shadowing_smith(material.roughness, n_v, n_l);
-
-	vec3 reflectance = F * D * G / abs(n_v * n_l * 4);
-
-	return vec4(reflectance * material_specular_color, D); // this might need to be f
+	float cos = dot(normal, microfacet);
+	float sin = 1 - cos * cos;
+	return max(NDF * sin * cos, 0.000001);
 }
 
-float pdf(float D, float cos_theta)
+vec3 lightSpecular(vec3 position, vec3 normal, vec3 wi, vec3 wo, int k)
 {
-	return max(D / (4 * cos_theta), 0.000001);
+	vec3 microfacet = normalize(wo + wi);
+
+	// in the brdf both rays need to be pointing away from the surface
+	vec2 res = brdf(wo, wi, microfacet);
+	float reflectance = res.x;
+	float NDF = res.y;
+
+	return reflectance * material_specular_color * lightColors[k] * dot(normal, wi) * lightIntensities[k] / attenuation(lightPositions[k], position);
 }
 
-vec3 point_lights_cook_torrance()
+vec3 lightDiffuse(vec3 position, vec3 normal, vec3 wi, int k)
 {
-	vec3 contributions = vec3(0, 0, 0);
-	for (int i = 0; i < lightsCount; ++i)
-	{
-		vec3 wi = normalize(position.xyz - lightPositions[i]);
-		float r = length(position.xyz - lightPositions[i]);
-		float cos_theta = max(0, dot(-wi, normal));
-
-		contributions += lightColors[i] * lightIntensities[i] * cos_theta / attenuation(r);
-	}
-	return contributions * material_specular_color / PI;
+	return material_diffuse_color * OneOverPI * lightColors[k] * dot(normal, wi) * lightIntensities[k] / attenuation(lightPositions[k], position);
 }
 
-vec3 point_lights_lambert()
+vec3 get_point_lights()
 {
 	vec3 contributions = vec3(0, 0, 0);
 	for (int i = 0; i < lightsCount; ++i)
 	{
-		vec3 wi = normalize(position.xyz - lightPositions[i]);
-		float r = length(position.xyz - lightPositions[i]);
-		float cos_theta = max(0, dot(-wi, normal));
+		vec3 wi = normalize(lightPositions[i] - position.xyz);
 
-		contributions += lightColors[i] * lightIntensities[i] * cos_theta / attenuation(r);
+		contributions += lightDiffuse(position.xyz, normal, wi, i);
+		contributions += lightSpecular(position.xyz, normal, wi, wo, i);
 	}
-	return contributions * material_diffuse_color / PI;
+	return contributions;
 }
 
-vec3 environment_map_cook_torrance(int samples)
+vec3 get_environment_map(int samples)
 {
 	vec3 contributions = vec3(0, 0, 0);
 	for (int i = 0; i < samples; ++i)
 	{
 		vec3 half_vector = halfvector_GGX_sample();
-		vec3 half_vector_transformed = normalize(TBN * half_vector);
+		vec3 microfacet = normalize(TBN * half_vector);
 
-		vec3 wi = reflect(wo, half_vector_transformed);
+		vec3 wi = reflect(-wo, microfacet);
 		
-		vec4 res = brdf(wo, wi, half_vector_transformed);
-		vec3 brdf_color = res.rgb;
-		vec4 tex = texture(environment_map, ray_to_uv(-wi));
-		vec3 tex_color = tex.rgb / (tex.a * tex.a);
+		vec2 res = brdf(wo, wi, microfacet);
+		float reflectance = res.x;
+		float NDF = res.y;
+		vec4 tex = texture(environment_map, ray_to_uv(wi));
+		vec3 tex_color = tex.rgb / tex.a;
+
+		float pdf = pdfGGX(NDF, microfacet);
 		
-		contributions += brdf_color * tex_color * dot(normal, -wi) / pdf(res.a, max(0, dot(normal, -wi)));
+		contributions += reflectance * material_specular_color *  tex_color * dot(normal, wi) / pdf;
 	}
 	// Average all the contributions
 	return contributions / samples;
 }
 
-vec3 environment_map_lambert(int samples)
+vec3 getContributions()
 {
-	// For now use sampling => uniformly sample over the hemisphere
-	vec3 contributions = vec3(0, 0, 0);
-	for (int i = 0; i < samples; ++i)
-	{
-		vec3 half_vector = sample_uniform();
-		vec3 half_vector_transformed = normalize(TBN * half_vector);
-		vec3 wi = reflect(wo, half_vector_transformed);
-	
-		vec4 tex = texture(environment_map, ray_to_uv(wi));
-		vec3 tex_color = tex.rgb;
-		//vec3 tex_color = texture(environment_map_diffuse, ray_to_uv(normal)).rgb;
-		
-		contributions += tex_color;
-	}
-	// Average all the contributions
-	return contributions / samples * material_diffuse_color;
-}
-
-vec3 specular_brdf()
-{
-	//return vec3(0);
-	return /*point_lights_cook_torrance() + */environment_map_cook_torrance(20);
-}
-
-vec3 diffuse_brdf()
-{
-	return vec3(0);
-	return point_lights_lambert() + environment_map_lambert(20);
+	return get_point_lights() + get_environment_map(100);
 }
 
 void prepare_surface_data()
@@ -309,7 +307,6 @@ void main(void)
 	prepare_surface_data();
 	
 	wo = normalize(camera - position.xyz);
-	vec3 diffuse_color = diffuse_brdf();
-	vec3 specular_color = specular_brdf();
-	fragColor = vec4(diffuse_color + specular_color, 1);
+	fragColor = vec4(getContributions(), 1);
+	//fragColor = vec4(lightsCount, lightsCount, lightsCount, 1);
 }

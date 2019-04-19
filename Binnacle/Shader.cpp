@@ -302,14 +302,18 @@ void material::update()
 	const auto mat_color_loc = glGetUniformLocation(program_, "material.color");
 	glUniform3fv(mat_color_loc, 1, &color_[0]);
 
-	const float roughness = 0.1f;
+	const float roughness = 0.01f;
 	const float metalness = 0;
+	const float index_of_refraction = 1;
 
 	const auto roughness_loc = glGetUniformLocation(program_, "material.roughness");
 	glUniform1f(roughness_loc, roughness);
 
 	const auto metalness_loc = glGetUniformLocation(program_, "material.metalness");
 	glUniform1f(metalness_loc, metalness);
+
+	const auto index_of_refraction_loc = glGetUniformLocation(program_, "material.n");
+	glUniform1f(index_of_refraction_loc, index_of_refraction);
 
 	// The texture samplers
 	const auto diffuse_map_loc = glGetUniformLocation(program_, "diffuseMap");
