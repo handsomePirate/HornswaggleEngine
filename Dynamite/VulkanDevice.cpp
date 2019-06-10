@@ -68,6 +68,7 @@ Vulkan::Device::Device(const VkInstance& instance, const Window& window)
 	float queue_priorities[1] = { 0.0 };
 	chosenQueueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 	chosenQueueInfo.pNext = NULL;
+	chosenQueueInfo.flags = 0;
 	chosenQueueInfo.queueCount = 1;
 	chosenQueueInfo.pQueuePriorities = queue_priorities;
 
@@ -97,7 +98,8 @@ Vulkan::Device::Device(const VkInstance& instance, const Window& window)
 
 Vulkan::Device::~Device()
 {
-	vkDestroyDevice(device_, NULL);
+	if (Valid())
+		vkDestroyDevice(device_, NULL);
 }
 
 const VkDevice& Vulkan::Device::Get() const
@@ -138,7 +140,8 @@ bool Vulkan::Device::CheckDevicePertinence(const VkPhysicalDevice& device, const
 	for (unsigned int i = 0; i < queueFamilyCount; ++i) 
 	{
 		VkBool32 presentSupport = VK_FALSE;
-		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+		VkResult res = vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+		assert(!res);
 		if (properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) 
 		{
 			if (!found)

@@ -1,7 +1,6 @@
 #pragma once
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.hpp>
-#include <vulkan/vulkan_win32.h>
 #include <string>
 
 namespace Vulkan
@@ -28,6 +27,5 @@ namespace Vulkan
 		const VkInstance& Get() const;
 	private:
 		VkInstance instance_;
-		VkResult result_;
 	};
 }

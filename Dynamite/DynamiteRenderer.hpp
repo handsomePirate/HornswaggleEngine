@@ -9,7 +9,7 @@ namespace Dynamite
 		Renderer(const std::string& engineName, unsigned int engineVersion);
 		~Renderer();
 		Window& SetTargetWindow(unsigned int sizeX, unsigned int sizeY);
-		void Introduce();
+		void Introduce() const;
 		void Render();
 	private:
 		void createCommandPool();

@@ -3,7 +3,6 @@
 #include "WindowProvider.hpp"
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.hpp>
-#include <vulkan/vulkan_win32.h>
 
 namespace Vulkan
 {
@@ -13,6 +12,7 @@ namespace Vulkan
 		Device(const Instance& instance, const Window& window)
 			: Device(instance.Get(), window) {}
 		Device(const VkInstance& instance, const Window& window);
+
 		~Device();
 		const VkDevice& Get() const;
 		const VkPhysicalDeviceProperties& GetProperties() const;

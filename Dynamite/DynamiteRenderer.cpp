@@ -22,7 +22,7 @@ Window& Dynamite::Renderer::SetTargetWindow(unsigned int sizeX, unsigned int siz
 	return window_;
 }
 
-void Dynamite::Renderer::Introduce()
+void Dynamite::Renderer::Introduce() const
 {
 	if (!device_.Valid())
 		return;
@@ -54,7 +54,11 @@ void Dynamite::Renderer::createCommandPool()
 	commandPoolInfo.queueFamilyIndex = device_.GetFamilyIndex();
 	commandPoolInfo.flags = 0; //VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT
 
-	VkResult res = vkCreateCommandPool(device_.Get(), &commandPoolInfo, NULL, &commandPool_);
+	commandPool_ = nullptr;
+	VkCommandPool command_pool;
+	const VkDevice device = device_.Get();
+	VkResult res = vkCreateCommandPool(device, &commandPoolInfo, NULL, &command_pool);
+	assert(!res);
 
 	VkCommandBufferAllocateInfo commandBufferAllocateInfo;
 	commandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -65,6 +69,7 @@ void Dynamite::Renderer::createCommandPool()
 
 	commandBuffers_.resize(commandBufferCount_);
 	res = vkAllocateCommandBuffers(device_.Get(), &commandBufferAllocateInfo, commandBuffers_.data());
+	assert(!res);
 
 	// TODO: handle errors
 }
