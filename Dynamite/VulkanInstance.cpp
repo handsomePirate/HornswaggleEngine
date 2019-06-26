@@ -44,7 +44,8 @@ Vulkan::Instance::Instance(const VkApplicationInfo& applicationInfo)
 	inst_info.enabledLayerCount = 0;
 	inst_info.ppEnabledLayerNames = NULL;
 
-	result_ = vkCreateInstance(&inst_info, NULL, &instance_);
+	VkResult result = vkCreateInstance(&inst_info, NULL, &instance_);
+	assert(!result);
 
 	// TODO: handle errors
 }

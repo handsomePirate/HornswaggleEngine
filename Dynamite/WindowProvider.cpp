@@ -10,6 +10,7 @@ Window WindowProvider::GetVulkanWindow(const Vulkan::Instance& instance, const u
 	createInfo.hwnd = GetWin32WindowHandle(createInfo.hinstance, sizeX, sizeY);
 	Window window;
 	window.hwnd = createInfo.hwnd;
+	vkCreateDisplayPlaneSurfaceKHR()
 	VkResult res = vkCreateWin32SurfaceKHR(instance.Get(), &createInfo, NULL, &window.surface);
 	
 	assert(!res);

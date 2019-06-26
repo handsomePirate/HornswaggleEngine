@@ -29,6 +29,7 @@ struct material
 	float metalness;
 
 	vec3 color;
+	float IOR;
 };
 
 struct vertex
@@ -80,9 +81,9 @@ struct light
 
 const triangle triangles[] = 
 {
-	{{vec3(-5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(-5, 0, -5), vec3(0, 1, 0)}, {0.001, 0, vec3(1, 1, 1)}},
-	{{vec3(-5, 0, -5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, -5), vec3(0, 1, 0)}, {0.001, 0, vec3(1, 1, 1)}},
-	BOX(-0.5, 0, -0.5, 0.5, 1, 0.5, material(0.001, 0, vec3(1, 0.2, 0.2))),
+	{{vec3(-5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(-5, 0, -5), vec3(0, 1, 0)}, {0.1, 0, vec3(1, 1, 1), 1.33}},
+	{{vec3(-5, 0, -5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, -5), vec3(0, 1, 0)}, {0.1, 0, vec3(1, 1, 1), 1.33}},
+	BOX(-0.5, 0, -0.5, 0.5, 1, 0.5, material(0.1, 0, vec3(1, 0.2, 0.2), 1.33)),
 };
 
 const int time_mod = 20000;
@@ -112,7 +113,7 @@ struct hitinfo
 //==================================RANDOM========================================
 bool rand_init = true;
 uvec2 rand_stage;
-#define TEA_ITERATION_COUNT 24
+#define TEA_ITERATION_COUNT 32
 uvec2 tea(uvec2 v)
 {
 	uint k[4] = { 0xA341316C, 0xC8013EA4, 0xAD90777D, 0x7E95761E };
@@ -169,15 +170,6 @@ float intersectTriangle(vec3 origin, vec3 dir, int i)
     float res = f * dot(e2, q);
 
     return res;
-}
-
-vec3 computeTangent(vec3 normal)
-{
-	if (normal.x == 0 && normal.z == 0)
-		return vec3(1, 0, 0);
-	float a = normal.z / sqrt(normal.z * normal.z + normal.x * normal.x);
-	float b = -normal.x / sqrt(normal.z * normal.z + normal.x * normal.x);
-	return vec3(a, 0, b);
 }
 
 vec3 nearestLinePoint(vec3 b, vec3 a, vec3 v1)
@@ -295,7 +287,7 @@ vec3 getDiffuseColor(material mat)
 vec3 getSpecularColor(material mat)
 {
 	// A metallic surface reflects the world in the color of its albedo while a dielectric has a weak white color
-	return mix(vec3(1), mat.color, mat.metalness);
+	return mix(vec3(0.1), mat.color, mat.metalness);
 }
 
 float shadowingSchlick(float roughness, float d)
@@ -330,21 +322,38 @@ float computeD(hitinfo h, float cos_theta)
 	return D;
 }
 
-vec4 CookTorranceBRDF(vec3 wo, vec3 wi, float cos_theta, hitinfo h, vec3 h_t)
+float fresnelDielectric(float cosThetaI, float cosThetaT, float etaT)
 {
-	float D = computeD(h, cos_theta);
+	float eta = 1 / etaT;
+	float Rper = (eta * cosThetaI - cosThetaT) / (eta * cosThetaI + cosThetaT);
+	float Rpar = (cosThetaI - eta * cosThetaT) / (cosThetaI + eta * cosThetaT);
+	return 0.5f*(Rpar*Rpar + Rper * Rper);
+}
 
-	float v_h = dot(h_t, wi);
-	vec3 f = mix(vec3(0.03), h.mat.color, h.mat.metalness);
-	vec3 F = f + (1 - f) * pow(1 - v_h, 5);
+vec3 fresnelConductor()
+{
+	return vec3(0.5);
+}
+
+vec4 CookTorranceBRDF(vec3 wo, vec3 wi, hitinfo h, bool metallic)
+{
+	vec3 halfNormal = normalize(wo + wi);
+	float cosTheta = halfNormal.y;
+	float D = computeD(h, cosTheta);
+
+	float v_h = dot(halfNormal, wi);
+
+	vec3 F;
+	if (metallic)
+		F = fresnelConductor();
+	else
+		F = vec3(fresnelDielectric(dot(wi, h.normal), dot(wo, h.normal), h.mat.IOR));
 
 	float n_v = dot(h.normal, wo);
 	float n_l = dot(h.normal, wi);
 	float G = shadowingSmith(h.mat.roughness, n_v, n_l);
 
-	vec3 reflectance = F * D * G / (n_v * n_l * 4);
-
-	return vec4(reflectance, D);
+	return vec4(F * D * G / (n_v * n_l * 4), D);
 }
 
 float pdfGGX(float D, vec3 wm, vec3 wi)
@@ -365,7 +374,7 @@ vec3 lightSpecular(vec3 position, hitinfo h, vec3 wi, vec3 wo, int k)
 	float cos_theta = max(0, dot(half_normal, h.normal));
 
 	// in the brdf both rays need to be pointing away from the surface
-	vec4 res = CookTorranceBRDF(wo, wi, cos_theta, h, half_normal);
+	vec4 res = CookTorranceBRDF(wo, wi, h, false);
 	vec3 brdf_color = res.rgb;
 
 	float distance = length(lights[k].position - position);
@@ -417,17 +426,9 @@ hitinfo rayCast(vec3 origin, vec3 dir)
 	h.end = true;
 	if (intersectPrimitives(origin, dir, h)) 
 	{
-		vec3 tangent = computeTangent(h.normal);
-		vec3 bitangent = cross(h.normal, tangent);
-		mat3 TBN = mat3(tangent, h.normal, bitangent);
-
-		vec3 half_vector = halfvectorGGXSample(h.mat.roughness);
+		/*
 		
-		vec3 half_vector_transformed = normalize(TBN * half_vector);
-
-		vec3 wi = reflect(dir, half_vector_transformed);
-
-		h.dir = wi;
+		*/
 		h.end = false;
 	}
 	return h;
@@ -447,46 +448,105 @@ vec3 getColorAt(hitinfo h, vec3 wo)
 		return getContributions(h, wo);
 }
 
+struct frame
+{
+	vec3 x;
+	vec3 y;
+	vec3 z;
+};
+
+// Presume normal is normalized
+frame createFrame(vec3 normal)
+{
+	vec3 tangent = (normal.x > 0.99f) ? vec3(0, 1, 0) : vec3(1, 0, 0);
+	if (normal.x < -0.99f)
+		tangent = vec3(0, -1, 0);
+	vec3 bitangent = cross(normal, tangent);
+	tangent = cross(bitangent, normal);
+	return frame(tangent, normal, bitangent);
+}
+
+vec3 transformFromFrame(frame f, vec3 v)
+{
+	return f.x * v.x + f.y * v.y + f.z * v.z;
+}
+
+vec3 transformToFrame(frame f, vec3 v)
+{
+	return vec3(dot(v, f.x), dot(v, f.y), dot(v, f.z));
+}
+
+vec3 reflectGGX(hitinfo h, vec3 dir, out vec3 halfNormal)
+{
+	halfNormal = halfvectorGGXSample(h.mat.roughness);
+	return reflect(dir, halfNormal);
+}
+
+vec3 reflectUniform(hitinfo h)
+{
+	return cosineSample();
+}
+
+float getReflectance(vec3 color)
+{
+	return max(max(color.r, color.g), color.b);
+}
+
 vec4 accumulateColor(vec3 origin, vec3 dir)
 {	
-	// The first slot serves to hold the direction from the eye to avoid if-else branching later
-	hitinfo hits[bounces + 2];
-	int end = 1;
-
-	// Follow the path of the ray and remember the hit information (to avoid recursion)
-	for (int i = 1; i < bounces + 2; ++i)
+	const int maxDepth = 20;
+	int hitCount = -1;
+	vec3 accumulatedColor = vec3(0);
+	float throughput = 1;
+	while (true)
 	{
-		hits[i] = rayCast(origin, dir);
-		origin = hits[i].at;
-		dir = hits[i].dir;
-		++end;
-		if (hits[i].end)
+		hitinfo hit = rayCast(origin, dir);
+		frame f = createFrame(hit.normal);
+		vec3 localDir = transformToFrame(f, dir);
+		++hitCount;
+		if (!hit.end && hitCount <= maxDepth)
+		{
+			vec3 diffuseColor = getDiffuseColor(hit.mat);
+			vec3 specularColor = getSpecularColor(hit.mat);
+			bool metallic = hit.mat.metalness >= 0.5;
+
+			float diffuseReflectance = getReflectance(diffuseColor);
+			float specularReflectance = getReflectance(specularColor);
+			float reflectanceSum = diffuseReflectance + specularReflectance;
+			float r = rand()[0] * reflectanceSum;
+			r = 1;
+
+			vec3 localReflectDir;
+			if (r < diffuseReflectance)
+			{
+				localReflectDir = reflectUniform(hit);
+			}
+			else
+			{
+				vec3 halfNormal;
+				localReflectDir = reflectGGX(hit, localDir, halfNormal);
+				return vec4(CookTorranceBRDF(-localDir, localReflectDir, hit, false).rgb, 1);
+				vec4 brdfd = CookTorranceBRDF(-localDir, localReflectDir, hit, metallic);
+				vec3 brdf = brdfd.rgb;
+				//return vec4(brdf, 1);
+				//pdfGGX(brdfd.a, );
+				//accumulatedColor;
+			}
+			
+			origin = hit.at;
+			dir = transformFromFrame(f, localReflectDir);
+		}
+		else
+		{
 			break;
+		}
+		//accumulatedColor += hit.mat.color;
+		throughput *= 0.9;
 	}
-	hits[0].dir = normalize(hits[1].at - eye);
-
-	//return vec4(vec3(end - 1 >= 0), 1);
-
-	// For each bounce accumulate its color attenuated by bouncing and by distance travelled
-	vec3 color = getColorAt(hits[end - 1], -hits[end - 2].dir);
-	for (int i = end - 2; i >= 1; --i)
-	{ 
-		// Modify by last bounce and brdf
-		color *= 0.8; // bounce energy loss (in the future it should depend on the material)
-		
-		vec3 wi = hits[i].dir;
-		vec3 wo = -hits[i - 1].dir;
-
-		vec3 half_normal = normalize(wo + wi);
-		float cos_theta = max(0, dot(half_normal, hits[i].normal));
-
-		vec4 ct_brdf = CookTorranceBRDF(wo, wi, cos_theta, hits[i], half_normal);
-
-		color = color * ct_brdf.rgb * getSpecularColor(hits[i].mat) * dot(hits[i].normal, wi) / pdfGGX(ct_brdf.a, half_normal, wi);
-		color += getContributions(hits[i], wo);
-	}
-
-	return vec4(color, 1);
+	if (hitCount > 0)
+		accumulatedColor /= hitCount;
+	//accumulatedColor += throughput * backColor;
+	return vec4(accumulatedColor, 1);
 }
 
 vec4 pixelSample(vec3 origin, vec3 dir)
@@ -496,7 +556,7 @@ vec4 pixelSample(vec3 origin, vec3 dir)
 }
 //================================================================================
 
-#define SAMPLE_COUNT 1
+#define SAMPLE_COUNT 8
 #define LOCAL_SIZES 8
 
 shared vec4 sampleBuffer[LOCAL_SIZES][LOCAL_SIZES][SAMPLE_COUNT];
