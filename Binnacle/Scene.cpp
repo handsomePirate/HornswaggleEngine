@@ -20,8 +20,8 @@ void split_from(const std::string& str, size_t index, const char c, std::string&
 camera::camera()
 	: position_(), fov_(), aspect_(), z_near_(), z_far_() {}
 
-camera::camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, const float fov, const float aspect, const float z_near, const float z_far)
-	: position_(position, 1), focus_(focus), up_(normalize(up)), fov_(PI * (fov / 180.0f)), aspect_(aspect), z_near_(z_near), z_far_(z_far)
+camera::camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, const float fov, const float aspect, const float z_near, const float z_far, bool perspective)
+	: position_(position, 1), focus_(focus), up_(normalize(up)), fov_(PI * (fov / 180.0f)), aspect_(aspect), z_near_(z_near), z_far_(z_far), perspective_(perspective)
 {
 	create_projection_matrix();
 	create_view_matrix();
@@ -115,6 +115,16 @@ glm::mat4 camera::get_local_to_global_matrix() const
 		a13, a23, a33, a43,
 		  0,   0,   0,  1
 	));
+}
+
+void camera::set_perspective(const bool perspective)
+{
+	perspective_ = perspective;
+}
+
+bool camera::get_perspective() const
+{
+	return perspective_;
 }
 
 void camera::set_focus(glm::vec3& f)
@@ -358,7 +368,25 @@ void camera::create_matrices()
 
 void camera::create_projection_matrix()
 {
-	projection_matrix_ = glm::perspective(fov_, aspect_, z_near_, z_far_);
+	if (perspective_)
+	{
+		projection_matrix_ = glm::perspective(fov_, aspect_, z_near_, z_far_);
+	}
+	else
+	{
+		const float top = 1;
+		const float bottom = -1;
+		const float right = top * aspect_;
+		const float left = bottom * aspect_;
+		const float scale = 7;
+		projection_matrix_ = glm::mat4
+		(
+			scale / (right - left), 0, 0, -(right + left) / (right - left),
+			0, scale / (top - bottom), 0, -(top + bottom) / (top - bottom),
+			0, 0, -scale / (z_far_ - z_near_), -(z_far_ + z_near_) / (z_far_ - z_near_),
+			0, 0, 0, 1
+		);
+	}
 }
 
 void camera::create_view_matrix()

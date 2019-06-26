@@ -53,7 +53,7 @@ struct render_manager
 
 	GLuint filter(const std::string& fragment, GLuint tex, unsigned int in_width, unsigned int in_height, unsigned int out_width, unsigned int out_height) const;
 
-	void set_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, float fov, float aspect, float z_near, float z_far) const;
+	void set_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, float fov, float aspect, float z_near, float z_far, bool perspective = true) const;
 	camera& get_camera() const;
 
 	void set_background_color(const glm::vec3& color) const;

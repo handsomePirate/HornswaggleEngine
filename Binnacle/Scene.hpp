@@ -21,7 +21,7 @@
 struct camera
 {
 	camera();
-	camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, float fov, float aspect, float z_near, float z_far);
+	camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, float fov, float aspect, float z_near, float z_far, bool perspective = true);
 
 	void rotate(const glm::vec3& axis, float angle);
 	void rotate(float x, float y, float z, float angle);
@@ -39,6 +39,9 @@ struct camera
 	void translate_local_2_d(float dx, float dy, float dz);
 
 	glm::mat4 get_local_to_global_matrix() const;
+
+	void set_perspective(bool perspective);
+	bool get_perspective() const;
 
 	void set_focus(glm::vec3& f);
 	void set_focus(float x, float y, float z);
@@ -106,6 +109,8 @@ private:
 
 	glm::mat4 view_matrix_{};
 	glm::mat4 projection_matrix_{};
+
+	bool perspective_;
 
 	void create_projection_matrix();
 	void create_view_matrix();

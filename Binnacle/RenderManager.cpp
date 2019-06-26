@@ -310,7 +310,7 @@ GLuint render_manager::filter(const std::string& fragment, const GLuint tex, con
 	return 0;
 }
 
-void render_manager::set_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, const float fov, const float aspect, const float z_near, const float z_far) const
+void render_manager::set_camera(glm::vec3&& position, glm::vec3&& focus, glm::vec3&& up, const float fov, const float aspect, const float z_near, const float z_far, bool perspective) const
 {
 	if (env_ptr_)
 	{
@@ -318,6 +318,7 @@ void render_manager::set_camera(glm::vec3&& position, glm::vec3&& focus, glm::ve
 
 		cam->set_transform_focus(position, focus, up);
 		cam->set_frustum(fov, aspect, z_near, z_far);
+		cam->set_perspective(perspective);
 	}
 }
 
@@ -729,6 +730,10 @@ void render_manager::key_callback(GLFWwindow* window, const int key, const int s
 	if (keys_manager_[GLFW_KEY_R] && action == GLFW_PRESS)
 	{
 		reset_camera_ = !reset_camera_;
+	}
+	if (keys_manager_[GLFW_KEY_P] && action == GLFW_PRESS)
+	{
+		get_camera().set_perspective(!get_camera().get_perspective());
 	}
 	if (keys_manager_[GLFW_KEY_I] && action == GLFW_PRESS)
 	{
