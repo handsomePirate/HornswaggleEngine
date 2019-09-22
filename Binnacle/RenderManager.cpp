@@ -278,8 +278,10 @@ void render_manager::init_texture_rendering(const int width, const int height)
 	glViewport(0, 0, width_, height_);
 }
 
-unsigned char *render_manager::render_to_texture(const bool screen) const
+unsigned char *render_manager::render_to_texture(const bool screen)
 {
+	if (screen)
+		init_texture_rendering(width_, height_);
 	glBindFramebuffer(GL_FRAMEBUFFER, texture_fbo_);
 	glViewport(0, 0, texture_width_, texture_height_);
 
@@ -665,7 +667,7 @@ float render_manager::update()
 			if (keys_manager_[GLFW_KEY_LEFT_CONTROL] || keys_manager_[GLFW_KEY_DOWN])
 				get_camera().translate(0.0f, -speed, 0.0f);
 			if (keys_manager_[GLFW_KEY_M] || keys_manager_[GLFW_KEY_DOWN])
-				delete render_to_texture();
+				delete render_to_texture(true);
 			if (keys_manager_[GLFW_KEY_EQUAL])
 				get_camera().set_fov(get_camera().get_fov() + .01);
 			if (keys_manager_[GLFW_KEY_MINUS])
@@ -673,7 +675,7 @@ float render_manager::update()
 
 			if (reset_camera_)
 			{
-				get_camera().set_transform_forward(glm::vec3(0.0f, 0.5, 5.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+				get_camera().set_transform_forward(glm::vec3(0.0f, 2.0f, 15.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 				reset_camera_ = false;
 			}
 		}
@@ -798,12 +800,21 @@ void render_manager::reorder_pixels(rgba *pixels, const size_t width, const size
 	const auto count = width * height;
 
 	const auto temp = new rgba[1];
-	for (size_t i = 0; i < count / 2; ++i)
+	for (size_t w = 0; w < width; ++w)
 	{
-		*temp = pixels[i];
-		pixels[i] = pixels[count - 1 - i];
-		pixels[count - 1 - i] = *temp;
+		for (size_t h = 0; h < height / 2; ++h)
+		{
+			*temp = pixels[h * width + w];
+			pixels[h * width + w] = pixels[(height - 1 - h) * width + w];
+			pixels[(height - 1 - h) * width + w] = *temp;
+		}
 	}
+	//for (size_t i = 0; i < count / 2; ++i)
+	//{
+	//	*temp = pixels[i];
+	//	pixels[i] = pixels[count - 1 - i];
+	//	pixels[count - 1 - i] = *temp;
+	//}
 	delete[] temp;
 }
 

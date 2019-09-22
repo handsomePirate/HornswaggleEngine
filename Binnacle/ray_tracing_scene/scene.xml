@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+
+	Automatically converted from Wavefront OBJ
+
+-->
+
+<scene version="0.5.0">
+	<integrator id="integrator" type="direct"/>
+
+	<bsdf id="None_material" type="diffuse">
+		<rgb name="reflectance" value="0.603827 0.603827 0.603827"/>
+	</bsdf>
+
+	<shape id="scene_mesh" type="serialized">
+		<string name="filename" value="scene.serialized"/>
+		<integer name="shapeIndex" value="0"/>
+		<bsdf type="diffuse"/>
+	</shape>
+
+	<shape id="scene_0_mesh" type="serialized">
+		<string name="filename" value="scene.serialized"/>
+		<integer name="shapeIndex" value="1"/>
+		<bsdf type="diffuse"/>
+	</shape>
+
+</scene>

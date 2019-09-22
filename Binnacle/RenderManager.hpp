@@ -49,7 +49,7 @@ struct render_manager
 
 	// Prepare the renderer to render to a texture
 	void init_texture_rendering(int width, int height);
-	unsigned char *render_to_texture(bool screen = false) const;
+	unsigned char *render_to_texture(bool screen = false);
 
 	GLuint filter(const std::string& fragment, GLuint tex, unsigned int in_width, unsigned int in_height, unsigned int out_width, unsigned int out_height) const;
 

@@ -63,7 +63,7 @@ struct light
 
 #define TRIANGLE_COUNT 2 + BOX_COUNT * 12
 
-#define LIGHT_COUNT 2
+#define LIGHT_COUNT 1
 
 #define BOX(x1, y1, z1, x2, y2, z2, mat)\
 {{vec3(x1, y1, z2), vec3(0, 0, 1)}, {vec3(x2, y1, z2), vec3(0, 0, 1)}, {vec3(x1, y2, z2), vec3(0, 0, 1)}, mat},\
@@ -94,8 +94,9 @@ const float second_light_location_value = (time % time_mod) / time_div;
 
 const light lights[] =
 {
-	{vec3(cos(first_light_location_value) * 4, 0.3, sin(first_light_location_value) * 4), 10, vec3(0, 1, 0)},
-	{vec3(cos(second_light_location_value) * 3, 0.7, sin(second_light_location_value) * 3), 12, vec3(1)}
+	light(vec3(3, 1.6, 2), 80, vec3(1, 1, 1))
+	//{vec3(cos(first_light_location_value) * 4, 0.3, sin(first_light_location_value) * 4), 10, vec3(0, 1, 0)},
+	//{vec3(cos(second_light_location_value) * 3, 0.7, sin(second_light_location_value) * 3), 12, vec3(1)}
 };
 
 struct hitinfo
@@ -113,7 +114,7 @@ struct hitinfo
 //==================================RANDOM========================================
 bool rand_init = true;
 uvec2 rand_stage;
-#define TEA_ITERATION_COUNT 32
+#define TEA_ITERATION_COUNT 24
 uvec2 tea(uvec2 v)
 {
 	uint k[4] = { 0xA341316C, 0xC8013EA4, 0xAD90777D, 0x7E95761E };
@@ -134,7 +135,7 @@ vec2 rand()
 	if (rand_init)
 	{
 		rand_init = false;
-		rand_stage = tea(uvec2(abs(pix.x + 13 * gl_GlobalInvocationID.z), abs(pix.y + 19 * gl_GlobalInvocationID.z)));
+		rand_stage = tea(uvec2(abs(pix.x * 3 + 13 * gl_GlobalInvocationID.z), abs(pix.y + 19 * gl_GlobalInvocationID.z)));
 		return rand_stage / float(uint(0xFFFFFFFF));
 	}
 	rand_stage = tea(rand_stage);
@@ -396,7 +397,7 @@ vec3 lightDiffuse(vec3 position, hitinfo h, vec3 wi, int k)
 {
 	float distance = length(lights[k].position - position);
 
-	return getDiffuseColor(h.mat) * OneOverPI * lights[k].color * dot(h.normal, wi) * lights[k].intensity / attenuation(distance);
+	return getDiffuseColor(h.mat) * OneOverPI * lights[k].color * max(0, dot(h.normal, wi)) * lights[k].intensity / attenuation(distance);
 }
 
 vec3 getContributions(hitinfo h, vec3 wo)
@@ -413,7 +414,7 @@ vec3 getContributions(hitinfo h, vec3 wo)
 #endif
 		{
 			color += lightDiffuse(position, h, wi, i);
-			color += lightSpecular(position, h, wi, wo, i);
+			//color += lightSpecular(position, h, wi, wo, i);
 		}
 	}
 
@@ -497,7 +498,7 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 	const int maxDepth = 20;
 	int hitCount = -1;
 	vec3 accumulatedColor = vec3(0);
-	float throughput = 1;
+	vec3 throughput = vec3(1);
 	while (true)
 	{
 		hitinfo hit = rayCast(origin, dir);
@@ -507,31 +508,35 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 		if (!hit.end && hitCount <= maxDepth)
 		{
 			vec3 diffuseColor = getDiffuseColor(hit.mat);
-			vec3 specularColor = getSpecularColor(hit.mat);
-			bool metallic = hit.mat.metalness >= 0.5;
+			//vec3 specularColor = getSpecularColor(hit.mat);
 
-			float diffuseReflectance = getReflectance(diffuseColor);
-			float specularReflectance = getReflectance(specularColor);
-			float reflectanceSum = diffuseReflectance + specularReflectance;
-			float r = rand()[0] * reflectanceSum;
-			r = 1;
-
-			vec3 localReflectDir;
-			if (r < diffuseReflectance)
-			{
-				localReflectDir = reflectUniform(hit);
-			}
-			else
-			{
-				vec3 halfNormal;
-				localReflectDir = reflectGGX(hit, localDir, halfNormal);
-				return vec4(CookTorranceBRDF(-localDir, localReflectDir, hit, false).rgb, 1);
-				vec4 brdfd = CookTorranceBRDF(-localDir, localReflectDir, hit, metallic);
-				vec3 brdf = brdfd.rgb;
-				//return vec4(brdf, 1);
-				//pdfGGX(brdfd.a, );
-				//accumulatedColor;
-			}
+			vec3 localReflectDir = reflectUniform(hit);
+			throughput *= diffuseColor;
+			accumulatedColor += throughput * getContributions(hit, -dir);
+			//bool metallic = hit.mat.metalness >= 0.5;
+			//
+			//float diffuseReflectance = getReflectance(diffuseColor);
+			//float specularReflectance = getReflectance(specularColor);
+			//float reflectanceSum = diffuseReflectance + specularReflectance;
+			//float r = rand()[0] * reflectanceSum;
+			//r = 1;
+			//
+			//vec3 localReflectDir;
+			//if (r < diffuseReflectance)
+			//{
+			//	localReflectDir = reflectUniform(hit);
+			//}
+			//else
+			//{
+			//	vec3 halfNormal;
+			//	localReflectDir = reflectGGX(hit, localDir, halfNormal);
+			//	return vec4(CookTorranceBRDF(-localDir, localReflectDir, hit, false).rgb, 1);
+			//	vec4 brdfd = CookTorranceBRDF(-localDir, localReflectDir, hit, metallic);
+			//	vec3 brdf = brdfd.rgb;
+			//	//return vec4(brdf, 1);
+			//	//pdfGGX(brdfd.a, );
+			//	//accumulatedColor;
+			//}
 			
 			origin = hit.at;
 			dir = transformFromFrame(f, localReflectDir);
@@ -541,7 +546,6 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 			break;
 		}
 		//accumulatedColor += hit.mat.color;
-		throughput *= 0.9;
 	}
 	if (hitCount > 0)
 		accumulatedColor /= hitCount;
@@ -556,7 +560,7 @@ vec4 pixelSample(vec3 origin, vec3 dir)
 }
 //================================================================================
 
-#define SAMPLE_COUNT 8
+#define SAMPLE_COUNT 16
 #define LOCAL_SIZES 8
 
 shared vec4 sampleBuffer[LOCAL_SIZES][LOCAL_SIZES][SAMPLE_COUNT];

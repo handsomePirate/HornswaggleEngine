@@ -23,8 +23,8 @@ int main(int argc, char **argv)
 	rm.register_path("hdr_textures", "..\\..\\textures\\hdr");
 	rm.register_path("ldr_textures", "..\\..\\textures\\ldr");
 
-	rm.init_opengl_renderer();
-	//rm.init_path_tracer();
+	//rm.init_opengl_renderer();
+	rm.init_path_tracer();
 	rm.set_background_color(glm::vec3(0.2, 0.2, 0.6));
 
 	rm.set_lights(light(glm::vec3(1.0f, 0.1f, 9.0f), glm::vec3(1.0f, 1.0f, 1.0f), 20),
