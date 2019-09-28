@@ -114,7 +114,7 @@ struct hitinfo
 //==================================RANDOM========================================
 bool rand_init = true;
 uvec2 rand_stage;
-#define TEA_ITERATION_COUNT 24
+#define TEA_ITERATION_COUNT 32
 uvec2 tea(uvec2 v)
 {
 	uint k[4] = { 0xA341316C, 0xC8013EA4, 0xAD90777D, 0x7E95761E };
@@ -254,7 +254,7 @@ vec3 cosineSample()
 {
 	vec2 rv = rand();
 	float sin_theta = sqrt(rv[0]);   
-	float cos_theta = sqrt(1 - sin_theta * sin_theta);
+	float cos_theta = sqrt(1 - rv[0]);
 
 	float psi = rv[1] * 2 * PI;
  
@@ -304,6 +304,7 @@ float shadowingSmith(float roughness, float n_v, float n_l)
 
 float attenuation(float dist)
 {
+	//return dist * 0.17;
 	return dist * dist;
 }
 
@@ -506,23 +507,27 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 		vec3 localDir = transformToFrame(f, dir);
 		++hitCount;
 
-		if (!hit.end && hitCount < 3/* && hitCount < maxDepth*/)
+		float roulette = 0, refl = 1;
+
+		if (!hit.end && hitCount < 1 /*&& hitCount < maxDepth*/)
 		{
-			vec3 diffuseColor = getDiffuseColor(hit.mat);
-			
-			// Russian roulette
-			vec2 r = rand();
-			float roulette = (r.x + r.y) * 0.5;
-			float refl = getReflectance(diffuseColor);
 			if (roulette > refl)
 				break;
+
+			vec3 diffuseColor = getDiffuseColor(hit.mat);
 			//vec3 specularColor = getSpecularColor(hit.mat);
 
 			vec3 localReflectDir = reflectUniform(hit);
-			float cos = localReflectDir.y;
 
 			accumulatedColor += throughput * getContributions(hit, -dir);
 			throughput *= diffuseColor;
+
+			// Russian roulette
+			vec2 r = rand();
+			roulette = (r.x + r.y) * 0.5;
+			refl = getReflectance(throughput);
+
+			throughput /= refl;
 
 			//bool metallic = hit.mat.metalness >= 0.5;
 			//
@@ -566,13 +571,13 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 
 vec4 pixelSample(vec3 origin, vec3 dirUpLeft, vec3 dirUpRight, vec3 dirDownLeft, vec3 dirDownRight)
 {
-	vec2 r = rand();
+	vec2 r = vec2(0.5, 0.5);//rand();
 	vec3 dir = normalize(mix(mix(dirUpLeft, dirDownLeft, r.y), mix(dirUpRight, dirDownRight, r.y), r.x));
 	return accumulateColor(origin, dir);
 }
 //================================================================================
 
-#define SAMPLE_COUNT 8
+#define SAMPLE_COUNT 16
 #define LOCAL_SIZES 8
 
 shared vec4 sampleBuffer[LOCAL_SIZES][LOCAL_SIZES][SAMPLE_COUNT];
