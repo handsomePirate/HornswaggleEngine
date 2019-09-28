@@ -94,7 +94,7 @@ const float second_light_location_value = (time % time_mod) / time_div;
 
 const light lights[] =
 {
-	light(vec3(3, 1.6, 2), 80, vec3(1, 1, 1))
+	light(vec3(3, 1.6, 2), 20, vec3(1, 1, 1))
 	//{vec3(cos(first_light_location_value) * 4, 0.3, sin(first_light_location_value) * 4), 10, vec3(0, 1, 0)},
 	//{vec3(cos(second_light_location_value) * 3, 0.7, sin(second_light_location_value) * 3), 12, vec3(1)}
 };
@@ -304,7 +304,7 @@ float shadowingSmith(float roughness, float n_v, float n_l)
 
 float attenuation(float dist)
 {
-	return dist * dist + dist + 1;
+	return dist * dist;
 }
 
 float attenuation(vec3 position1, vec3 position2)
@@ -495,7 +495,7 @@ float getReflectance(vec3 color)
 
 vec4 accumulateColor(vec3 origin, vec3 dir)
 {	
-	const int maxDepth = 20;
+	//const int maxDepth = 50;
 	int hitCount = -1;
 	vec3 accumulatedColor = vec3(0);
 	vec3 throughput = vec3(1);
@@ -505,14 +505,25 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 		frame f = createFrame(hit.normal);
 		vec3 localDir = transformToFrame(f, dir);
 		++hitCount;
-		if (!hit.end && hitCount <= maxDepth)
+
+		if (!hit.end && hitCount < 3/* && hitCount < maxDepth*/)
 		{
 			vec3 diffuseColor = getDiffuseColor(hit.mat);
+			
+			// Russian roulette
+			vec2 r = rand();
+			float roulette = (r.x + r.y) * 0.5;
+			float refl = getReflectance(diffuseColor);
+			if (roulette > refl)
+				break;
 			//vec3 specularColor = getSpecularColor(hit.mat);
 
 			vec3 localReflectDir = reflectUniform(hit);
-			throughput *= diffuseColor;
+			float cos = localReflectDir.y;
+
 			accumulatedColor += throughput * getContributions(hit, -dir);
+			throughput *= diffuseColor;
+
 			//bool metallic = hit.mat.metalness >= 0.5;
 			//
 			//float diffuseReflectance = getReflectance(diffuseColor);
@@ -553,14 +564,15 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 	return vec4(accumulatedColor, 1);
 }
 
-vec4 pixelSample(vec3 origin, vec3 dir)
+vec4 pixelSample(vec3 origin, vec3 dirUpLeft, vec3 dirUpRight, vec3 dirDownLeft, vec3 dirDownRight)
 {
-	// TODO: jitter
+	vec2 r = rand();
+	vec3 dir = normalize(mix(mix(dirUpLeft, dirDownLeft, r.y), mix(dirUpRight, dirDownRight, r.y), r.x));
 	return accumulateColor(origin, dir);
 }
 //================================================================================
 
-#define SAMPLE_COUNT 16
+#define SAMPLE_COUNT 8
 #define LOCAL_SIZES 8
 
 shared vec4 sampleBuffer[LOCAL_SIZES][LOCAL_SIZES][SAMPLE_COUNT];
@@ -577,8 +589,21 @@ void main(void)
 
 	vec2 pos = vec2(pix) / vec2(size.x - 1, size.y - 1);
 
-	vec3 dir = normalize(mix(mix(ray00, ray01, pos.y), mix(ray10, ray11, pos.y), pos.x));
-	vec4 color = pixelSample(eye, dir);
+	vec2 posUp = vec2(pix.x, pix.y + 1) / vec2(size.x - 1, size.y - 1);
+	vec2 posDown = vec2(pix.x, pix.y - 1) / vec2(size.x - 1, size.y - 1);
+	vec2 posLeft = vec2(pix.x - 1, pix.y) / vec2(size.x - 1, size.y - 1);
+	vec2 posRight = vec2(pix.x + 1, pix.y) / vec2(size.x - 1, size.y - 1);
+
+	vec2 posUpLeft = (posUp + posLeft) * 0.5;
+	vec2 posUpRight = (posUp + posRight) * 0.5;
+	vec2 posDownLeft = (posDown + posLeft) * 0.5;
+	vec2 posDownRight = (posDown + posRight) * 0.5;
+
+	vec3 dirUpLeft = normalize(mix(mix(ray00, ray01, posUpLeft.y), mix(ray10, ray11, posUpLeft.y), posUpLeft.x));
+	vec3 dirUpRight = normalize(mix(mix(ray00, ray01, posUpRight.y), mix(ray10, ray11, posUpRight.y), posUpRight.x));
+	vec3 dirDownLeft = normalize(mix(mix(ray00, ray01, posDownLeft.y), mix(ray10, ray11, posDownLeft.y), posDownLeft.x));
+	vec3 dirDownRight = normalize(mix(mix(ray00, ray01, posDownRight.y), mix(ray10, ray11, posDownRight.y), posDownRight.x));
+	vec4 color = pixelSample(eye, dirUpLeft, dirUpRight, dirDownLeft, dirDownRight);
 
 	sampleBuffer[gl_GlobalInvocationID.x % LOCAL_SIZES][gl_GlobalInvocationID.y % LOCAL_SIZES][gl_GlobalInvocationID.z % SAMPLE_COUNT] = color;
 
