@@ -88,7 +88,7 @@ void gpu_path_tracer::render(const std::shared_ptr<scene>& scn_ptr,
 	glUniform1i(time_loc, time);
 
 	// Compute
-	const int block_size = 8;
+	const int block_size = 1;
 	glDispatchCompute((GLuint)width_ / block_size, (GLuint)height_ / block_size, 1);
 
 	// make sure writing to image has finished before read

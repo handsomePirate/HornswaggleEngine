@@ -136,6 +136,7 @@ vec2 rand()
 	{
 		rand_init = false;
 		rand_stage = tea(uvec2(abs(pix.x * 3 + 13 * gl_GlobalInvocationID.z), abs(pix.y + 19 * gl_GlobalInvocationID.z)));
+		rand_stage = tea(rand_stage);
 		return rand_stage / float(uint(0xFFFFFFFF));
 	}
 	rand_stage = tea(rand_stage);
@@ -500,6 +501,14 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 	int hitCount = -1;
 	vec3 accumulatedColor = vec3(0);
 	vec3 throughput = vec3(1);
+
+	//hitinfo hit = rayCast(origin, dir);
+	//vec3 diffuseColor = getDiffuseColor(hit.mat);
+	//if (hit.end)
+	//	return vec4(0, 0, 0, 1);
+	//else
+	//	return vec4(getContributions(hit, -dir), 1);
+	
 	while (true)
 	{
 		hitinfo hit = rayCast(origin, dir);
@@ -509,7 +518,7 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 
 		float roulette = 0, refl = 1;
 
-		if (!hit.end && hitCount < 1 /*&& hitCount < maxDepth*/)
+		if (!hit.end) //&& hitCount < 1 && hitCount < maxDepth)
 		{
 			if (roulette > refl)
 				break;
@@ -571,14 +580,14 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 
 vec4 pixelSample(vec3 origin, vec3 dirUpLeft, vec3 dirUpRight, vec3 dirDownLeft, vec3 dirDownRight)
 {
-	vec2 r = vec2(0.5, 0.5);//rand();
+	vec2 r = rand();
 	vec3 dir = normalize(mix(mix(dirUpLeft, dirDownLeft, r.y), mix(dirUpRight, dirDownRight, r.y), r.x));
 	return accumulateColor(origin, dir);
 }
 //================================================================================
 
-#define SAMPLE_COUNT 16
-#define LOCAL_SIZES 8
+#define SAMPLE_COUNT 64
+#define LOCAL_SIZES 1
 
 shared vec4 sampleBuffer[LOCAL_SIZES][LOCAL_SIZES][SAMPLE_COUNT];
 
