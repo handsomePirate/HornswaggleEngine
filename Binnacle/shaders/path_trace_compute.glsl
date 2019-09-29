@@ -19,9 +19,6 @@ ivec2 pix;
 #define PI 3.14159265358979323846
 #define OneOverPI 0.31830988618379067153
 
-#define USE_SHADOWS
-//#undef USE_SHADOWS
-
 #define LIGHT_SAMPLE_COUNT 8
 
 //===========================PRIMITIVE==DEFINITIONS===============================
@@ -88,7 +85,7 @@ const Triangle triangles[] =
 
 const SphericalLight sphericalLights[] =
 {
-	SphericalLight(vec3(3, 1.6, 2), 100, vec3(1, 1, 1), 0.1)
+	SphericalLight(vec3(3, 1.6, 2), 20, vec3(1, 1, 1), 0.1)
 };
 
 struct HitInfo
@@ -328,18 +325,17 @@ HitInfo sampleSphericalLight(int k)
 
 float TorranceSparrowDistributionTerm(const HitInfo surfaceHit, vec3 halfNormal)
 {
-	float NDotM = dot(halfNormal, surfaceHit.normal);
-	if (NDotM == 0)
-		return 1;
+	float NdotM = dot(halfNormal, surfaceHit.normal); //cosine of normal and microfacet normal
+	NdotM = max(NdotM, 0.001);
 
-	float a2 = NDotM * NDotM;
-	float tang = (a2 - 1) / a2;
-	float r2 = surfaceHit.material.roughness * surfaceHit.material.roughness;
+	float a2 = NdotM * NdotM;
+	float tan = (a2 - 1.0) / a2;
+	float roughness = surfaceHit.material.roughness;
+	float roughness2 = roughness * roughness;
+	float denominator = PI * roughness2 * a2 * a2;
+	float result = exp(tan / roughness2) / denominator;
 
-	float denom = PI * r2 * a2 * a2;
-	float nom = exp(tang * r2);
-
-	return nom / denom;
+	return result;
 }
 
 float TorranceSparrowGeometryTerm(const HitInfo surfaceHit, vec3 wo, vec3 wi, vec3 halfNormal, float cosTheta)
@@ -361,7 +357,7 @@ vec4 TorranceSparrowBRDF(const HitInfo surfaceHit, vec3 wo, vec3 wi, vec3 halfNo
 	vec3 F = F0 + (1 - F0) * pow(1 - cosTheta, 5);
 
 	vec3 res = D * G * F / abs(4 * dot(surfaceHit.normal, wi) * dot(surfaceHit.normal, wo));
-
+	//return vec4(res, D);
 	return vec4(res + getDiffuseColor(surfaceHit.material), D);
 }
 
@@ -461,7 +457,7 @@ vec3 sampleTracingRelativeNormal(const HitInfo hit)
 	float theta = atan(sqrt(-hit.material.roughness * hit.material.roughness * log(1 - r.x)));
 	float phi = 2 * PI * r.y;
 
-	return normalize(vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)));
+	return vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
 }
 
 float getTracingDirectionProbability(float D, vec3 halfNormal, vec3 wi)
@@ -493,13 +489,14 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 		++hitCount;
 
 		// The 'hitCount' cap needs to be here for the shaders to work (there will not be that many bounces anyway)
-		if (!hit.end && hitCount < 50)
+		if (!hit.end && hitCount < 1)
 		{
 			accumulatedColor += throughput * (getContributions(hit, -dir));
 
 			vec3 halfNormalLocal = sampleTracingRelativeNormal(hit);
 			vec3 halfNormal = normalize(transformFromFrame(f, halfNormalLocal));
 			vec3 reflectDir = reflect(dir, halfNormal);
+			return vec4(halfNormal, 1);
 
 			vec4 torranceSparrow = TorranceSparrowBRDF(hit, -dir, reflectDir, halfNormal);
 			vec3 brdf = torranceSparrow.rgb;
