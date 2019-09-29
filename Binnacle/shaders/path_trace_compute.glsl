@@ -22,7 +22,7 @@ ivec2 pix;
 #define USE_SHADOWS
 //#undef USE_SHADOWS
 
-#define LIGHT_SAMPLE_COUNT 10
+#define LIGHT_SAMPLE_COUNT 8
 
 //===========================PRIMITIVE==DEFINITIONS===============================
 struct Material
@@ -88,7 +88,7 @@ const Triangle triangles[] =
 
 const SphericalLight sphericalLights[] =
 {
-	SphericalLight(vec3(3, 1.6, 2), 20, vec3(1, 1, 1), 0.1)
+	SphericalLight(vec3(3, 1.6, 2), 100, vec3(1, 1, 1), 0.1)
 };
 
 struct HitInfo
@@ -241,24 +241,24 @@ bool intersectPrimitives(vec3 origin, vec3 dir, out HitInfo info)
 		}
 	}
 
-	for (int i = 0; i < LIGHT_COUNT; ++i)
-	{
-		float t = IntersectSphere(origin, dir, i);
-		vec3 hit = origin + t * dir;
-
-		if (t > margin && t < smallest)
-		{
-			vec3 normal = normalize(hit - sphericalLights[i].position);
-			if (dot(-dir, normal) > 0)
-			{
-				info.at = hit;
-				info.material = Material(0, 0, sphericalLights[i].intensity, sphericalLights[i].color);
-				info.normal = normal;
-				smallest = t;
-				found = true;
-			}
-		}
-	}
+	//for (int i = 0; i < LIGHT_COUNT; ++i)
+	//{
+	//	float t = IntersectSphere(origin, dir, i);
+	//	vec3 hit = origin + t * dir;
+	//
+	//	if (t > margin && t < smallest)
+	//	{
+	//		vec3 normal = normalize(hit - sphericalLights[i].position);
+	//		if (dot(-dir, normal) > 0)
+	//		{
+	//			info.at = hit;
+	//			info.material = Material(0, 0, sphericalLights[i].intensity, sphericalLights[i].color);
+	//			info.normal = normal;
+	//			smallest = t;
+	//			found = true;
+	//		}
+	//	}
+	//}
 
 	return found;
 }
@@ -270,16 +270,6 @@ bool CheckVisibility(vec3 origin, vec3 dir, float length)
 		float t = intersectTriangle(origin, dir, i);
 		
 		if (t > 0.01 && t < length)
-		{
-			return false;
-		}
-	}
-
-	for (int i = 0; i < LIGHT_COUNT; ++i)
-	{
-		float t = IntersectSphere(origin, dir, i);
-	
-		if (t > 0.01 && t < length - 0.01)
 		{
 			return false;
 		}
@@ -324,7 +314,7 @@ HitInfo sampleSphericalLight(int k)
 {
 	vec2 r = rand();
 
-	float theta = 2 * PI * r.x;
+	float theta = 2 * PI * r.x;	
 	float phi = acos(1 - 2 * r.y);
 
 	HitInfo hit;
@@ -381,7 +371,7 @@ vec3 solveLight(const HitInfo surfaceHit, const HitInfo lightHit, vec3 wo, vec3 
 	vec4 torranceSparrow = TorranceSparrowBRDF(surfaceHit, wo, wi, halfNormal);
 	vec3 brdf = torranceSparrow.rgb;
 	float dist = length(surfaceHit.at - lightHit.at);
-	float pdf = dist * dist / (area * abs(dot(lightHit.normal, normalize(surfaceHit.at - lightHit.at))));
+	float pdf = dist * dist / (area * abs(dot(lightHit.normal, -wi)));
 
 	return brdf * lightHit.material.color * lightHit.material.emissivity * max(0, dot(wi, surfaceHit.normal)) / pdf;
 }
@@ -399,10 +389,9 @@ vec3 getContributions(const HitInfo h, vec3 wo)
 			HitInfo lightHit = sampleSphericalLight(i);
 			// 'wi' points towards the light
 			vec3 wi = normalize(lightHit.at - h.at);
-			if (dot(lightHit.normal, wi) < 0 && dot(h.normal, wi) > 0 && CheckVisibility(h.at, wi, length(lightHit.at - h.at)))
+			if (dot(lightHit.normal, wi) < 0 && CheckVisibility(h.at, wi, length(lightHit.at - h.at)))
 			{
 				thisLightColor += solveLight(h, lightHit, wo, wi, area);
-				return thisLightColor;
 			}
 		}
 		color += thisLightColor / LIGHT_SAMPLE_COUNT;
@@ -466,6 +455,21 @@ float getReflectance(vec3 color)
 	return max(max(color.r, color.g), color.b);
 }
 
+vec3 sampleTracingRelativeNormal(const HitInfo hit)
+{
+	vec2 r = rand();
+	float theta = atan(sqrt(-hit.material.roughness * hit.material.roughness * log(1 - r.x)));
+	float phi = 2 * PI * r.y;
+
+	return normalize(vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)));
+}
+
+float getTracingDirectionProbability(float D, vec3 halfNormal, vec3 wi)
+{
+	float cos = dot(halfNormal, wi);
+	return max(0.0001, D / (4 * abs(cos)));
+}
+
 vec4 accumulateColor(vec3 origin, vec3 dir)
 {	
 	//const int maxDepth = 50;
@@ -473,33 +477,36 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 	vec3 accumulatedColor = vec3(0);
 	vec3 throughput = vec3(1);
 
-	HitInfo hit = rayCast(origin, dir);
-	if (hit.end)
-		return vec4(0, 0, 0, 1);
-	else
-		return vec4(getContributions(hit, -dir) + hit.material.emissivity * hit.material.color, 1);
-	/*
-	while (true)
+	//HitInfo hit = rayCast(origin, dir);
+	//if (hit.end)
+	//	return vec4(0, 0, 0, 1);
+	//else
+	//	return vec4(getContributions(hit, -dir) + hit.material.emissivity * hit.material.color, 1);
+	
+	float roulette = 0, refl = 1;
+
+	while (roulette <= refl)
 	{
-		hitinfo hit = rayCast(origin, dir);
+		HitInfo hit = rayCast(origin, dir);
 		frame f = createFrame(hit.normal);
 		vec3 localDir = transformToFrame(f, dir);
 		++hitCount;
 
-		float roulette = 0, refl = 1;
-
-		if (!hit.end)
+		// The 'hitCount' cap needs to be here for the shaders to work (there will not be that many bounces anyway)
+		if (!hit.end && hitCount < 50)
 		{
-			if (roulette > refl)
-				break;
+			accumulatedColor += throughput * (getContributions(hit, -dir));
 
-			vec3 diffuseColor = getDiffuseColor(hit.material);
-			//vec3 specularColor = getSpecularColor(hit.material);
+			vec3 halfNormalLocal = sampleTracingRelativeNormal(hit);
+			vec3 halfNormal = normalize(transformFromFrame(f, halfNormalLocal));
+			vec3 reflectDir = reflect(dir, halfNormal);
 
-			vec3 localReflectDir = reflectUniform(hit);
+			vec4 torranceSparrow = TorranceSparrowBRDF(hit, -dir, reflectDir, halfNormal);
+			vec3 brdf = torranceSparrow.rgb;
+			float D = torranceSparrow.a;
+			float pdf = getTracingDirectionProbability(D, halfNormal, reflectDir);
 
-			accumulatedColor += throughput * getContributions(hit, -dir);
-			throughput *= diffuseColor;
+			throughput *= brdf * max(0, dot(hit.normal, reflectDir)) / pdf;
 
 			// Russian roulette
 			vec2 r = rand();
@@ -509,18 +516,17 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 			throughput /= refl;
 			
 			origin = hit.at;
-			dir = transformFromFrame(f, localReflectDir);
+			dir = reflectDir;
 		}
 		else
 		{
 			break;
 		}
-		//accumulatedColor += hit.material.color;
 	}
 	if (hitCount > 0)
 		accumulatedColor /= hitCount;
-	//accumulatedColor += throughput * backColor;
-	return vec4(accumulatedColor, 1);*/
+
+	return vec4(accumulatedColor, 1);
 }
 
 vec4 pixelSample(vec3 origin, vec3 dirUpLeft, vec3 dirUpRight, vec3 dirDownLeft, vec3 dirDownRight)
