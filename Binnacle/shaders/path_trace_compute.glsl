@@ -78,14 +78,14 @@ struct SphericalLight
 
 const Triangle triangles[] =
 {
-	{{vec3(-5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(-5, 0, -5), vec3(0, 1, 0)}, {0.9, 0, 0, vec3(1, 1, 1)}},
-	{{vec3(-5, 0, -5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, -5), vec3(0, 1, 0)}, {0.9, 0, 0, vec3(1, 1, 1)}},
+	{{vec3(-5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(-5, 0, -5), vec3(0, 1, 0)}, {0.1, 0, 0, vec3(1, 1, 1)}},
+	{{vec3(-5, 0, -5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, -5), vec3(0, 1, 0)}, {0.1, 0, 0, vec3(1, 1, 1)}},
 	BOX(-0.5, 0, -0.5, 0.5, 1, 0.5, Material(0.9, 0, 0, vec3(1, 0.2, 0.2))),
 };
 
 const SphericalLight sphericalLights[] =
 {
-	SphericalLight(vec3(3, 1.6, 2), 20, vec3(1, 1, 1), 0.1)
+	SphericalLight(vec3(3, 1.6, 2), 80, vec3(1, 1, 1), 0.1)
 };
 
 struct HitInfo
@@ -457,7 +457,8 @@ vec3 sampleTracingRelativeNormal(const HitInfo hit)
 	float theta = atan(sqrt(-hit.material.roughness * hit.material.roughness * log(1 - r.x)));
 	float phi = 2 * PI * r.y;
 
-	return vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
+	vec3 result = vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
+	return normalize(result);
 }
 
 float getTracingDirectionProbability(float D, vec3 halfNormal, vec3 wi)
@@ -489,14 +490,13 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 		++hitCount;
 
 		// The 'hitCount' cap needs to be here for the shaders to work (there will not be that many bounces anyway)
-		if (!hit.end && hitCount < 1)
+		if (!hit.end && hitCount < 50)
 		{
 			accumulatedColor += throughput * (getContributions(hit, -dir));
 
 			vec3 halfNormalLocal = sampleTracingRelativeNormal(hit);
 			vec3 halfNormal = normalize(transformFromFrame(f, halfNormalLocal));
 			vec3 reflectDir = reflect(dir, halfNormal);
-			return vec4(halfNormal, 1);
 
 			vec4 torranceSparrow = TorranceSparrowBRDF(hit, -dir, reflectDir, halfNormal);
 			vec3 brdf = torranceSparrow.rgb;
