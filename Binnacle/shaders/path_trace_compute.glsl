@@ -22,14 +22,16 @@ ivec2 pix;
 #define USE_SHADOWS
 //#undef USE_SHADOWS
 
+#define LIGHT_SAMPLE_COUNT 10
+
 //===========================PRIMITIVE==DEFINITIONS===============================
-struct material
+struct Material
 {
 	float roughness;
 	float metalness;
+	float emissivity;
 
 	vec3 color;
-	float IOR;
 };
 
 struct vertex
@@ -38,24 +40,22 @@ struct vertex
 	vec3 normal;
 };
 
-struct triangle
+struct Triangle
 {
 	vertex v1;
 	vertex v2;
 	vertex v3;
 
-	material mat;
+	Material material;
 };
 
-struct light
+struct SphericalLight
 {
 	vec3 position;
 	float intensity;
 	vec3 color;
+	float radius;
 };
-
-#define CULL_BACKFACES
-//#undef CULL_BACKFACES
 
 #define MAX_SCENE_BOUNDS 100.0
 
@@ -65,44 +65,36 @@ struct light
 
 #define LIGHT_COUNT 1
 
-#define BOX(x1, y1, z1, x2, y2, z2, mat)\
-{{vec3(x1, y1, z2), vec3(0, 0, 1)}, {vec3(x2, y1, z2), vec3(0, 0, 1)}, {vec3(x1, y2, z2), vec3(0, 0, 1)}, mat},\
-{{vec3(x1, y2, z2), vec3(0, 0, 1)}, {vec3(x2, y1, z2), vec3(0, 0, 1)}, {vec3(x2, y2, z2), vec3(0, 0, 1)}, mat},\
-{{vec3(x2, y1, z2), vec3(1, 0, 0)}, {vec3(x2, y1, z1), vec3(1, 0, 0)}, {vec3(x2, y2, z2), vec3(1, 0, 0)}, mat},\
-{{vec3(x2, y2, z2), vec3(1, 0, 0)}, {vec3(x2, y1, z1), vec3(1, 0, 0)}, {vec3(x2, y2, z1), vec3(1, 0, 0)}, mat},\
-{{vec3(x2, y1, z1), vec3(0, 0, -1)}, {vec3(x1, y1, z1), vec3(0, 0, -1)}, {vec3(x2, y2, z1), vec3(0, 0, -1)}, mat},\
-{{vec3(x2, y2, z1), vec3(0, 0, -1)}, {vec3(x1, y1, z1), vec3(0, 0, -1)}, {vec3(x1, y2, z1), vec3(0, 0, -1)}, mat},\
-{{vec3(x1, y1, z1), vec3(-1, 0, 0)}, {vec3(x1, y1, z2), vec3(-1, 0, 0)}, {vec3(x1, y2, z1), vec3(-1, 0, 0)}, mat},\
-{{vec3(x1, y2, z1), vec3(-1, 0, 0)}, {vec3(x1, y1, z2), vec3(-1, 0, 0)}, {vec3(x1, y2, z2), vec3(-1, 0, 0)}, mat},\
-{{vec3(x1, y1, z2), vec3(0, -1, 0)}, {vec3(x2, y1, z2), vec3(0, -1, 0)}, {vec3(x1, y1, z1), vec3(0, -1, 0)}, mat},\
-{{vec3(x1, y1, z1), vec3(0, -1, 0)}, {vec3(x2, y1, z2), vec3(0, -1, 0)}, {vec3(x2, y1, z1), vec3(0, -1, 0)}, mat},\
-{{vec3(x1, y2, z2), vec3(0, 1, 0)}, {vec3(x2, y2, z2), vec3(0, 1, 0)}, {vec3(x1, y2, z1), vec3(0, 1, 0)}, mat},\
-{{vec3(x1, y2, z1), vec3(0, 1, 0)}, {vec3(x2, y2, z2), vec3(0, 1, 0)}, {vec3(x2, y2, z1), vec3(0, 1, 0)}, mat}
+#define BOX(x1, y1, z1, x2, y2, z2, material)\
+{{vec3(x1, y1, z2), vec3(0, 0, 1)}, {vec3(x2, y1, z2), vec3(0, 0, 1)}, {vec3(x1, y2, z2), vec3(0, 0, 1)}, material},\
+{{vec3(x1, y2, z2), vec3(0, 0, 1)}, {vec3(x2, y1, z2), vec3(0, 0, 1)}, {vec3(x2, y2, z2), vec3(0, 0, 1)}, material},\
+{{vec3(x2, y1, z2), vec3(1, 0, 0)}, {vec3(x2, y1, z1), vec3(1, 0, 0)}, {vec3(x2, y2, z2), vec3(1, 0, 0)}, material},\
+{{vec3(x2, y2, z2), vec3(1, 0, 0)}, {vec3(x2, y1, z1), vec3(1, 0, 0)}, {vec3(x2, y2, z1), vec3(1, 0, 0)}, material},\
+{{vec3(x2, y1, z1), vec3(0, 0, -1)}, {vec3(x1, y1, z1), vec3(0, 0, -1)}, {vec3(x2, y2, z1), vec3(0, 0, -1)}, material},\
+{{vec3(x2, y2, z1), vec3(0, 0, -1)}, {vec3(x1, y1, z1), vec3(0, 0, -1)}, {vec3(x1, y2, z1), vec3(0, 0, -1)}, material},\
+{{vec3(x1, y1, z1), vec3(-1, 0, 0)}, {vec3(x1, y1, z2), vec3(-1, 0, 0)}, {vec3(x1, y2, z1), vec3(-1, 0, 0)}, material},\
+{{vec3(x1, y2, z1), vec3(-1, 0, 0)}, {vec3(x1, y1, z2), vec3(-1, 0, 0)}, {vec3(x1, y2, z2), vec3(-1, 0, 0)}, material},\
+{{vec3(x1, y1, z2), vec3(0, -1, 0)}, {vec3(x2, y1, z2), vec3(0, -1, 0)}, {vec3(x1, y1, z1), vec3(0, -1, 0)}, material},\
+{{vec3(x1, y1, z1), vec3(0, -1, 0)}, {vec3(x2, y1, z2), vec3(0, -1, 0)}, {vec3(x2, y1, z1), vec3(0, -1, 0)}, material},\
+{{vec3(x1, y2, z2), vec3(0, 1, 0)}, {vec3(x2, y2, z2), vec3(0, 1, 0)}, {vec3(x1, y2, z1), vec3(0, 1, 0)}, material},\
+{{vec3(x1, y2, z1), vec3(0, 1, 0)}, {vec3(x2, y2, z2), vec3(0, 1, 0)}, {vec3(x2, y2, z1), vec3(0, 1, 0)}, material}
 
-const triangle triangles[] = 
+const Triangle triangles[] =
 {
-	{{vec3(-5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(-5, 0, -5), vec3(0, 1, 0)}, {0.1, 0, vec3(1, 1, 1), 1.33}},
-	{{vec3(-5, 0, -5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, -5), vec3(0, 1, 0)}, {0.1, 0, vec3(1, 1, 1), 1.33}},
-	BOX(-0.5, 0, -0.5, 0.5, 1, 0.5, material(0.1, 0, vec3(1, 0.2, 0.2), 1.33)),
+	{{vec3(-5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(-5, 0, -5), vec3(0, 1, 0)}, {0.9, 0, 0, vec3(1, 1, 1)}},
+	{{vec3(-5, 0, -5), vec3(0, 1, 0)}, {vec3(5, 0, 5), vec3(0, 1, 0)}, {vec3(5, 0, -5), vec3(0, 1, 0)}, {0.9, 0, 0, vec3(1, 1, 1)}},
+	BOX(-0.5, 0, -0.5, 0.5, 1, 0.5, Material(0.9, 0, 0, vec3(1, 0.2, 0.2))),
 };
 
-const int time_mod = 20000;
-const float time_div = time_mod / (2 * PI);
-
-const float first_light_location_value = (time % time_mod) / time_div + PI * 0.6;
-const float second_light_location_value = (time % time_mod) / time_div;
-
-const light lights[] =
+const SphericalLight sphericalLights[] =
 {
-	light(vec3(3, 1.6, 2), 20, vec3(1, 1, 1))
-	//{vec3(cos(first_light_location_value) * 4, 0.3, sin(first_light_location_value) * 4), 10, vec3(0, 1, 0)},
-	//{vec3(cos(second_light_location_value) * 3, 0.7, sin(second_light_location_value) * 3), 12, vec3(1)}
+	SphericalLight(vec3(3, 1.6, 2), 20, vec3(1, 1, 1), 0.1)
 };
 
-struct hitinfo
+struct HitInfo
 {
 	vec3 at;
-	material mat;
+	Material material;
 	vec3 normal;
 
 	vec3 dir;
@@ -204,8 +196,28 @@ vec3 interpolateNormal(int i, vec3 hit)
 	return normalize(triangles[i].v1.normal * bar1 + triangles[i].v2.normal * bar2 + triangles[i].v3.normal * bar3);
 };
 
+float IntersectSphere(vec3 origin, vec3 dir, int k)
+{
+	float t0, t1;
+	vec3 L = sphericalLights[k].position - origin;
+	float tca = dot(L, dir);
+	if (tca < 0) 
+		return -1;
+	float d2 = dot(L, L) - tca * tca;
+
+	float radius2 = sphericalLights[k].radius * sphericalLights[k].radius;
+	if (d2 > radius2) 
+		return -2;
+
+	float thc = sqrt(radius2 - d2);
+	t0 = tca - thc;
+	t1 = tca + thc;
+
+	return t0 < t1 ? t0 : t1;
+}
+
 const float margin = 0;
-bool intersectPrimitives(vec3 origin, vec3 dir, out hitinfo info) 
+bool intersectPrimitives(vec3 origin, vec3 dir, out HitInfo info)
 {
 	float smallest = MAX_SCENE_BOUNDS;
 	bool found = false;
@@ -218,12 +230,29 @@ bool intersectPrimitives(vec3 origin, vec3 dir, out hitinfo info)
 		if (t > margin && t < smallest)
 		{
 			vec3 normal = interpolateNormal(i, hit);
-#ifdef CULL_BACKFACES 
 			if (dot(-dir, normal) > 0)
-#endif
 			{
 				info.at = hit;
-				info.mat = triangles[i].mat;
+				info.material = triangles[i].material;
+				info.normal = normal;
+				smallest = t;
+				found = true;
+			}
+		}
+	}
+
+	for (int i = 0; i < LIGHT_COUNT; ++i)
+	{
+		float t = IntersectSphere(origin, dir, i);
+		vec3 hit = origin + t * dir;
+
+		if (t > margin && t < smallest)
+		{
+			vec3 normal = normalize(hit - sphericalLights[i].position);
+			if (dot(-dir, normal) > 0)
+			{
+				info.at = hit;
+				info.material = Material(0, 0, sphericalLights[i].intensity, sphericalLights[i].color);
 				info.normal = normal;
 				smallest = t;
 				found = true;
@@ -246,6 +275,16 @@ bool CheckVisibility(vec3 origin, vec3 dir, float length)
 		}
 	}
 
+	for (int i = 0; i < LIGHT_COUNT; ++i)
+	{
+		float t = IntersectSphere(origin, dir, i);
+	
+		if (t > 0.01 && t < length - 0.01)
+		{
+			return false;
+		}
+	}
+
 	return true;
 }
 //================================================================================
@@ -261,194 +300,126 @@ vec3 cosineSample()
  
 	return vec3(sin_theta * cos(psi), cos_theta, sin_theta * sin(psi));
 }
-
-vec3 halfvectorGGXSample(float roughness)
-{
-	vec2 rv = rand();
-	
-	rv[0] = min(rv[0], 0.9999);
-
-	float theta = atan(roughness * sqrt(rv[0] / (1 - rv[0])));
-	float phi = 2 * PI * rv[1];
-
-	float x = sin(theta) * cos(phi);
-	float z = sin(theta) * sin(phi);
-	float y = cos(theta);
-
-	return vec3(x, y, z);
-}
 //================================================================================
 
 //==================================TRACE=========================================
-vec3 getDiffuseColor(material mat)
+vec3 getDiffuseColor(const Material material)
 {
 	// A metallic surface has no diffuse color, dielectrics have the albedo diffuse color
-	return mix(mat.color, vec3(0), mat.metalness);
+	return mix(material.color, vec3(0), material.metalness);
 }
 
-vec3 getSpecularColor(material mat)
+vec3 getSpecularColor(const Material material)
 {
 	// A metallic surface reflects the world in the color of its albedo while a dielectric has a weak white color
-	return mix(vec3(0.1), mat.color, mat.metalness);
+	return mix(vec3(0.1), material.color, material.metalness);
 }
 
-float shadowingSchlick(float roughness, float d)
+float getSphericalLightArea(int k)
 {
-	float k = roughness * sqrt(2 * OneOverPI);
-	return d / (d * (1 - k) + k);
+	return 4 * PI * sphericalLights[k].radius * sphericalLights[k].radius;
 }
 
-float shadowingSmith(float roughness, float n_v, float n_l)
+HitInfo sampleSphericalLight(int k)
 {
-	return shadowingSchlick(roughness, n_v) * shadowingSchlick(roughness, n_l);
+	vec2 r = rand();
+
+	float theta = 2 * PI * r.x;
+	float phi = acos(1 - 2 * r.y);
+
+	HitInfo hit;
+	hit.at = vec3(sin(phi) * cos(theta), cos(phi), sin(phi) * sin(theta)) * sphericalLights[k].radius + sphericalLights[k].position;
+	hit.normal = normalize(hit.at - sphericalLights[k].position);
+	hit.material.color = sphericalLights[k].color;
+	hit.material.emissivity = sphericalLights[k].intensity;
+	
+	return hit;
 }
 
-float attenuation(float dist)
+float TorranceSparrowDistributionTerm(const HitInfo surfaceHit, vec3 halfNormal)
 {
-	//return dist * 0.17;
-	return dist * dist;
+	float NDotM = dot(halfNormal, surfaceHit.normal);
+	if (NDotM == 0)
+		return 1;
+
+	float a2 = NDotM * NDotM;
+	float tang = (a2 - 1) / a2;
+	float r2 = surfaceHit.material.roughness * surfaceHit.material.roughness;
+
+	float denom = PI * r2 * a2 * a2;
+	float nom = exp(tang * r2);
+
+	return nom / denom;
 }
 
-float attenuation(vec3 position1, vec3 position2)
+float TorranceSparrowGeometryTerm(const HitInfo surfaceHit, vec3 wo, vec3 wi, vec3 halfNormal, float cosTheta)
 {
-	float len = length(position1 - position2);
-	return attenuation(len);
+	float NDotM = dot(surfaceHit.normal, halfNormal);
+	float g1 = abs(2 * NDotM * dot(surfaceHit.normal, wo) / cosTheta);
+	float g2 = abs(2 * NDotM * dot(surfaceHit.normal, wi) / cosTheta);
+
+	return min(1, min(g1, g2));
 }
 
-float computeD(hitinfo h, float cos_theta)
+vec4 TorranceSparrowBRDF(const HitInfo surfaceHit, vec3 wo, vec3 wi, vec3 halfNormal)
 {
-	float roughness_2 = h.mat.roughness * h.mat.roughness;
-	float r = (roughness_2 - 1) * cos_theta * cos_theta + 1;
-	float D = roughness_2 / (PI * r * r);
-	if (isnan(D))
-		D = 1;
-	return D;
+	float cosTheta = dot(wo, halfNormal);
+
+	float D = TorranceSparrowDistributionTerm(surfaceHit, halfNormal);
+	float G = TorranceSparrowGeometryTerm(surfaceHit, wo, wi, halfNormal, cosTheta);
+	vec3 F0 = vec3(0.9);
+	vec3 F = F0 + (1 - F0) * pow(1 - cosTheta, 5);
+
+	vec3 res = D * G * F / abs(4 * dot(surfaceHit.normal, wi) * dot(surfaceHit.normal, wo));
+
+	return vec4(res + getDiffuseColor(surfaceHit.material), D);
 }
 
-float fresnelDielectric(float cosThetaI, float cosThetaT, float etaT)
+vec3 solveLight(const HitInfo surfaceHit, const HitInfo lightHit, vec3 wo, vec3 wi, float area)
 {
-	float eta = 1 / etaT;
-	float Rper = (eta * cosThetaI - cosThetaT) / (eta * cosThetaI + cosThetaT);
-	float Rpar = (cosThetaI - eta * cosThetaT) / (cosThetaI + eta * cosThetaT);
-	return 0.5f*(Rpar*Rpar + Rper * Rper);
+	vec3 halfNormal = normalize(wi + wo);
+	vec4 torranceSparrow = TorranceSparrowBRDF(surfaceHit, wo, wi, halfNormal);
+	vec3 brdf = torranceSparrow.rgb;
+	float dist = length(surfaceHit.at - lightHit.at);
+	float pdf = dist * dist / (area * abs(dot(lightHit.normal, normalize(surfaceHit.at - lightHit.at))));
+
+	return brdf * lightHit.material.color * lightHit.material.emissivity * max(0, dot(wi, surfaceHit.normal)) / pdf;
 }
 
-vec3 fresnelConductor()
+vec3 getContributions(const HitInfo h, vec3 wo)
 {
-	return vec3(0.5);
-}
-
-vec4 CookTorranceBRDF(vec3 wo, vec3 wi, hitinfo h, bool metallic)
-{
-	vec3 halfNormal = normalize(wo + wi);
-	float cosTheta = halfNormal.y;
-	float D = computeD(h, cosTheta);
-
-	float v_h = dot(halfNormal, wi);
-
-	vec3 F;
-	if (metallic)
-		F = fresnelConductor();
-	else
-		F = vec3(fresnelDielectric(dot(wi, h.normal), dot(wo, h.normal), h.mat.IOR));
-
-	float n_v = dot(h.normal, wo);
-	float n_l = dot(h.normal, wi);
-	float G = shadowingSmith(h.mat.roughness, n_v, n_l);
-
-	return vec4(F * D * G / (n_v * n_l * 4), D);
-}
-
-float pdfGGX(float D, vec3 wm, vec3 wi)
-{
-	float cos_theta = abs(dot(wm, wi));
-	return max(D / (4 * cos_theta), 0.000001);
-}
-
-float pdfCosine(vec3 normal, vec3 wi)
-{
-	// 'normal' and 'wi' both need to be normalized
-	return dot(normal, wi) * OneOverPI;
-}
-
-vec3 lightSpecular(vec3 position, hitinfo h, vec3 wi, vec3 wo, int k)
-{
-	vec3 half_normal = normalize(wo + wi);
-	float cos_theta = max(0, dot(half_normal, h.normal));
-
-	// in the brdf both rays need to be pointing away from the surface
-	vec4 res = CookTorranceBRDF(wo, wi, h, false);
-	vec3 brdf_color = res.rgb;
-
-	float distance = length(lights[k].position - position);
-
-	return brdf_color * getSpecularColor(h.mat) * lights[k].color * dot(h.normal, wi) * lights[k].intensity / attenuation(distance);
-}
-
-//////////////////////////////
-//	\\ cam     ^ light		//
-//   \\		  | \			//
-//	  \\  wo  // wi			//
-//     \\    //				//
-//     \ |  //				//
-//       V //				//
-//________X_________________//
-//							//
-//////////////////////////////
-vec3 lightDiffuse(vec3 position, hitinfo h, vec3 wi, int k)
-{
-	float distance = length(lights[k].position - position);
-
-	return getDiffuseColor(h.mat) * OneOverPI * lights[k].color * max(0, dot(h.normal, wi)) * lights[k].intensity / attenuation(distance);
-}
-
-vec3 getContributions(hitinfo h, vec3 wo)
-{
-	vec3 position = h.at;
 	vec3 color = vec3(0);
 	for (int i = 0; i < LIGHT_COUNT; ++i)
 	{
-		// 'wi' points towards the light
-		vec3 wi = normalize(lights[i].position - position);
+		vec3 thisLightColor = vec3(0);
+		float area = getSphericalLightArea(i);
 		// find any obstructing geometry between the surface point and the light
-#ifdef USE_SHADOWS
-		if (CheckVisibility(position, wi, length(lights[i].position - position)))
-#endif
+		for (int j = 0; j < LIGHT_SAMPLE_COUNT; ++j)
 		{
-			color += lightDiffuse(position, h, wi, i);
-			//color += lightSpecular(position, h, wi, wo, i);
+			HitInfo lightHit = sampleSphericalLight(i);
+			// 'wi' points towards the light
+			vec3 wi = normalize(lightHit.at - h.at);
+			if (dot(lightHit.normal, wi) < 0 && dot(h.normal, wi) > 0 && CheckVisibility(h.at, wi, length(lightHit.at - h.at)))
+			{
+				thisLightColor += solveLight(h, lightHit, wo, wi, area);
+				return thisLightColor;
+			}
 		}
+		color += thisLightColor / LIGHT_SAMPLE_COUNT;
 	}
 
 	return color;
 }
 
-hitinfo rayCast(vec3 origin, vec3 dir) 
+HitInfo rayCast(vec3 origin, vec3 dir)
 {
-	hitinfo h;
+	HitInfo h;
 	h.end = true;
 	if (intersectPrimitives(origin, dir, h)) 
 	{
-		/*
-		
-		*/
 		h.end = false;
 	}
 	return h;
-}
-
-vec3 getBackColor(vec3 dir)
-{
-	// TODO: add environment map option
-	return backColor;
-}
-
-vec3 getColorAt(hitinfo h, vec3 wo)
-{
-	if (h.end)
-		return getBackColor(wo);
-	else
-		return getContributions(h, wo);
 }
 
 struct frame
@@ -469,23 +440,23 @@ frame createFrame(vec3 normal)
 	return frame(tangent, normal, bitangent);
 }
 
-vec3 transformFromFrame(frame f, vec3 v)
+vec3 transformFromFrame(const frame f, vec3 v)
 {
 	return f.x * v.x + f.y * v.y + f.z * v.z;
 }
 
-vec3 transformToFrame(frame f, vec3 v)
+vec3 transformToFrame(const frame f, vec3 v)
 {
 	return vec3(dot(v, f.x), dot(v, f.y), dot(v, f.z));
 }
 
-vec3 reflectGGX(hitinfo h, vec3 dir, out vec3 halfNormal)
+float pdfCosine(vec3 normal, vec3 wi)
 {
-	halfNormal = halfvectorGGXSample(h.mat.roughness);
-	return reflect(dir, halfNormal);
+	// 'normal' and 'wi' both need to be normalized
+	return dot(normal, wi) * OneOverPI;
 }
 
-vec3 reflectUniform(hitinfo h)
+vec3 reflectUniform(const HitInfo h)
 {
 	return cosineSample();
 }
@@ -502,13 +473,12 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 	vec3 accumulatedColor = vec3(0);
 	vec3 throughput = vec3(1);
 
-	//hitinfo hit = rayCast(origin, dir);
-	//vec3 diffuseColor = getDiffuseColor(hit.mat);
-	//if (hit.end)
-	//	return vec4(0, 0, 0, 1);
-	//else
-	//	return vec4(getContributions(hit, -dir), 1);
-	
+	HitInfo hit = rayCast(origin, dir);
+	if (hit.end)
+		return vec4(0, 0, 0, 1);
+	else
+		return vec4(getContributions(hit, -dir) + hit.material.emissivity * hit.material.color, 1);
+	/*
 	while (true)
 	{
 		hitinfo hit = rayCast(origin, dir);
@@ -518,13 +488,13 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 
 		float roulette = 0, refl = 1;
 
-		if (!hit.end) //&& hitCount < 1 && hitCount < maxDepth)
+		if (!hit.end)
 		{
 			if (roulette > refl)
 				break;
 
-			vec3 diffuseColor = getDiffuseColor(hit.mat);
-			//vec3 specularColor = getSpecularColor(hit.mat);
+			vec3 diffuseColor = getDiffuseColor(hit.material);
+			//vec3 specularColor = getSpecularColor(hit.material);
 
 			vec3 localReflectDir = reflectUniform(hit);
 
@@ -533,35 +503,10 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 
 			// Russian roulette
 			vec2 r = rand();
-			roulette = (r.x + r.y) * 0.5;
+			roulette = r.x;
 			refl = getReflectance(throughput);
 
 			throughput /= refl;
-
-			//bool metallic = hit.mat.metalness >= 0.5;
-			//
-			//float diffuseReflectance = getReflectance(diffuseColor);
-			//float specularReflectance = getReflectance(specularColor);
-			//float reflectanceSum = diffuseReflectance + specularReflectance;
-			//float r = rand()[0] * reflectanceSum;
-			//r = 1;
-			//
-			//vec3 localReflectDir;
-			//if (r < diffuseReflectance)
-			//{
-			//	localReflectDir = reflectUniform(hit);
-			//}
-			//else
-			//{
-			//	vec3 halfNormal;
-			//	localReflectDir = reflectGGX(hit, localDir, halfNormal);
-			//	return vec4(CookTorranceBRDF(-localDir, localReflectDir, hit, false).rgb, 1);
-			//	vec4 brdfd = CookTorranceBRDF(-localDir, localReflectDir, hit, metallic);
-			//	vec3 brdf = brdfd.rgb;
-			//	//return vec4(brdf, 1);
-			//	//pdfGGX(brdfd.a, );
-			//	//accumulatedColor;
-			//}
 			
 			origin = hit.at;
 			dir = transformFromFrame(f, localReflectDir);
@@ -570,12 +515,12 @@ vec4 accumulateColor(vec3 origin, vec3 dir)
 		{
 			break;
 		}
-		//accumulatedColor += hit.mat.color;
+		//accumulatedColor += hit.material.color;
 	}
 	if (hitCount > 0)
 		accumulatedColor /= hitCount;
 	//accumulatedColor += throughput * backColor;
-	return vec4(accumulatedColor, 1);
+	return vec4(accumulatedColor, 1);*/
 }
 
 vec4 pixelSample(vec3 origin, vec3 dirUpLeft, vec3 dirUpRight, vec3 dirDownLeft, vec3 dirDownRight)
